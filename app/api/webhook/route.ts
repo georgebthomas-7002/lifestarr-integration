@@ -2,6 +2,10 @@ import { eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { db, integrations, webhookEvents } from "@/lib/db";
+import {
+  ENGAGEMENT_BUNDLE_EVENT_TYPE,
+  ENGAGEMENT_EVENT_TYPES,
+} from "@/lib/integrations-config";
 import { applyOutcome } from "@/lib/process-outcome";
 import { dispatch } from "@/lib/router";
 import type { MightyWebhookPayload } from "@/lib/types";
@@ -80,6 +84,16 @@ export async function POST(req: Request) {
         updatedAt: new Date(),
       })
       .where(eq(webhookEvents.id, row.id));
+    if (ENGAGEMENT_EVENT_TYPES.includes(body.event_type as (typeof ENGAGEMENT_EVENT_TYPES)[number])) {
+      await db
+        .update(integrations)
+        .set({
+          failureCount: sql`${integrations.failureCount} + 1`,
+          lastFiredAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(integrations.eventType, ENGAGEMENT_BUNDLE_EVENT_TYPE));
+    }
     await db
       .update(integrations)
       .set({
