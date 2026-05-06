@@ -5,34 +5,96 @@ config({ path: ".env.local" });
 const url = process.env.WEBHOOK_URL ?? "http://localhost:3000/api/webhook";
 const secret = process.env.MIGHTY_WEBHOOK_SECRET;
 const eventType = process.argv[2] ?? "MemberPurchased";
+const emailOverride = process.argv[3];
 
 if (!secret) {
   console.error("MIGHTY_WEBHOOK_SECRET is not set in .env.local");
   process.exit(1);
 }
 
-const samplePayload = {
-  event_id: `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  event_timestamp: new Date().toISOString(),
-  event_type: eventType,
-  payload: {
+const baseEmail =
+  emailOverride ??
+  `lifestarr-test+${eventType.toLowerCase()}-${Date.now()}@sidekickstrategies.com`;
+
+function buildPayload(eventType: string): {
+  event_id: string;
+  event_timestamp: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+} {
+  const base = {
+    event_id: `test-${eventType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    event_timestamp: new Date().toISOString(),
+    event_type: eventType,
+  };
+
+  const member = {
     id: 12345,
-    email: "test@example.com",
+    email: baseEmail,
     first_name: "Test",
-    last_name: "User",
-    plan_id: 999,
-    plan_name: "LifeStarr Premier Monthly",
-    amount: 39.95,
-    currency: "USD",
-    interval: "monthly",
-    purchased_at: new Date().toISOString(),
-  },
-};
+    last_name: eventType,
+  };
+
+  switch (eventType) {
+    case "MemberJoined":
+      return {
+        ...base,
+        payload: { ...member, joined_at: new Date().toISOString() },
+      };
+    case "MemberPurchased":
+      return {
+        ...base,
+        payload: {
+          ...member,
+          plan_id: 999,
+          plan_name: "LifeStarr Premier Monthly",
+          amount: 39.95,
+          currency: "USD",
+          interval: "monthly",
+          purchased_at: new Date().toISOString(),
+        },
+      };
+    case "MemberPlanChanged":
+      return {
+        ...base,
+        payload: {
+          ...member,
+          plan_id: 1000,
+          plan_name: "LifeStarr Premier Annual",
+          interval: "annual",
+        },
+      };
+    case "MemberSubscriptionRenewed":
+      return {
+        ...base,
+        payload: {
+          ...member,
+          plan_id: 999,
+          plan_name: "LifeStarr Premier Monthly",
+          renewed_at: new Date().toISOString(),
+        },
+      };
+    case "MemberSubscriptionCanceled":
+      return {
+        ...base,
+        payload: { ...member, canceled_at: new Date().toISOString() },
+      };
+    case "MemberRemovedFromPlan":
+      return {
+        ...base,
+        payload: { ...member, removed_at: new Date().toISOString() },
+      };
+    default:
+      return { ...base, payload: member };
+  }
+}
 
 async function main() {
+  const body = buildPayload(eventType);
   console.log(`POST ${url}`);
-  console.log(`event_id: ${samplePayload.event_id}`);
-  console.log(`event_type: ${samplePayload.event_type}\n`);
+  console.log(`event_id: ${body.event_id}`);
+  console.log(`event_type: ${body.event_type}`);
+  console.log(`email: ${baseEmail}\n`);
 
   const res = await fetch(url, {
     method: "POST",
@@ -40,11 +102,16 @@ async function main() {
       "content-type": "application/json",
       authorization: `Bearer ${secret}`,
     },
-    body: JSON.stringify(samplePayload),
+    body: JSON.stringify(body),
   });
 
   console.log(`status: ${res.status} ${res.statusText}`);
-  console.log("body:", await res.text());
+  const text = await res.text();
+  try {
+    console.log("body:", JSON.stringify(JSON.parse(text), null, 2));
+  } catch {
+    console.log("body:", text);
+  }
 }
 
 main().catch((err) => {
