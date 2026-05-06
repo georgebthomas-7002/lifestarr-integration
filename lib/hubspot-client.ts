@@ -9,13 +9,17 @@ import { AssociationSpecAssociationCategoryEnum } from "@hubspot/api-client/lib/
 
 import type { LifestarrContactProps } from "@/lib/hubspot-properties";
 
-const token = process.env.HUBSPOT_API_TOKEN;
+let _client: Client | null = null;
 
-if (!token) {
-  throw new Error("HUBSPOT_API_TOKEN is not set");
+function getClient(): Client {
+  if (_client) return _client;
+  const token = process.env.HUBSPOT_API_TOKEN;
+  if (!token) {
+    throw new Error("HUBSPOT_API_TOKEN is not set");
+  }
+  _client = new Client({ accessToken: token });
+  return _client;
 }
-
-export const hubspot = new Client({ accessToken: token });
 
 export class HubSpotClientError extends Error {
   constructor(
@@ -64,7 +68,7 @@ export async function findContactByEmail(email: string): Promise<SimplePublicObj
       sorts: [],
       after: "0",
     };
-    const res = await hubspot.crm.contacts.searchApi.doSearch(search);
+    const res = await getClient().crm.contacts.searchApi.doSearch(search);
     return res.results[0] ?? null;
   } catch (err) {
     throw new HubSpotClientError(`findContactByEmail(${email})`, err);
@@ -111,7 +115,9 @@ export async function upsertContact(input: ContactInput): Promise<UpsertResult> 
 
   if (existing) {
     try {
-      const updated = await hubspot.crm.contacts.basicApi.update(existing.id, { properties });
+      const updated = await getClient().crm.contacts.basicApi.update(existing.id, {
+        properties,
+      });
       return { contact: updated, created: false };
     } catch (err) {
       throw new HubSpotClientError(`upsertContact.update(${existing.id})`, err);
@@ -123,7 +129,7 @@ export async function upsertContact(input: ContactInput): Promise<UpsertResult> 
       properties,
       associations: [],
     };
-    const created = await hubspot.crm.contacts.basicApi.create(payload);
+    const created = await getClient().crm.contacts.basicApi.create(payload);
     return { contact: created, created: true };
   } catch (err) {
     throw new HubSpotClientError(`upsertContact.create(${input.email})`, err);
@@ -140,7 +146,7 @@ export async function updateContactProperties(
     cleaned[k] = typeof v === "string" ? v : String(v);
   }
   try {
-    return await hubspot.crm.contacts.basicApi.update(contactId, { properties: cleaned });
+    return await getClient().crm.contacts.basicApi.update(contactId, { properties: cleaned });
   } catch (err) {
     throw new HubSpotClientError(`updateContactProperties(${contactId})`, err);
   }
@@ -152,7 +158,7 @@ export type CreateDealInput = {
   amount: number | string;
   pipeline: string;
   stage: string;
-  closeDate?: string; // ISO date
+  closeDate?: string;
   customProperties?: Record<string, string | number | boolean>;
 };
 
@@ -171,14 +177,13 @@ export async function createDeal(input: CreateDealInput): Promise<SimplePublicOb
   }
 
   try {
-    return await hubspot.crm.deals.basicApi.create({
+    return await getClient().crm.deals.basicApi.create({
       properties,
       associations: [
         {
           to: { id: input.contactId },
           types: [
             {
-              // Contact-to-Deal default association type. 3 is the standard "deal-to-contact" id.
               associationCategory: AssociationSpecAssociationCategoryEnum.HubspotDefined,
               associationTypeId: 3,
             },
@@ -195,7 +200,7 @@ export type DealPipelineStage = { id: string; label: string; displayOrder: numbe
 
 export async function getDealPipelineStages(pipelineId: string): Promise<DealPipelineStage[]> {
   try {
-    const pipeline = await hubspot.crm.pipelines.pipelinesApi.getById("deals", pipelineId);
+    const pipeline = await getClient().crm.pipelines.pipelinesApi.getById("deals", pipelineId);
     return pipeline.stages.map((s) => ({
       id: s.id,
       label: s.label,
