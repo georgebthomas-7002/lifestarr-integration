@@ -84,6 +84,57 @@ function buildPayload(eventType: string): {
         ...base,
         payload: { ...member, removed_at: new Date().toISOString() },
       };
+    case "MemberCourseProgressStarted":
+    case "MemberCourseProgressCompleted":
+      return {
+        ...base,
+        payload: {
+          ...member,
+          course_id: 444,
+          course_name: "LifeStarr Foundation Course",
+          progress_at: new Date().toISOString(),
+        },
+      };
+    case "PostCreated":
+      return {
+        ...base,
+        payload: {
+          author: { id: member.id, email: member.email },
+          post_id: 7777,
+          title: "How I started using LifeStarr",
+          created_at: new Date().toISOString(),
+        },
+      };
+    case "CommentCreated":
+      return {
+        ...base,
+        payload: {
+          author: { id: member.id, email: member.email },
+          comment_id: 8888,
+          post_id: 7777,
+          created_at: new Date().toISOString(),
+        },
+      };
+    case "RsvpCreated":
+      return {
+        ...base,
+        payload: {
+          ...member,
+          event_id: 5555,
+          event_name: "Weekly Q&A",
+          rsvp_at: new Date().toISOString(),
+        },
+      };
+    case "ReactionCreated":
+      return {
+        ...base,
+        payload: {
+          author: { id: member.id, email: member.email },
+          reaction: "heart",
+          target_id: 7777,
+          created_at: new Date().toISOString(),
+        },
+      };
     default:
       return { ...base, payload: member };
   }
