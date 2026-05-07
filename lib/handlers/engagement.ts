@@ -4,15 +4,22 @@ import {
   syncEngagementToHubspot,
   type EngagementEventType,
 } from "@/lib/engagement";
+import { findContactByMightyMemberId } from "@/lib/hubspot-client";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
 /**
- * Engagement payloads in Mighty have inconsistent shapes:
- *   - direct member events (course progress, RSVP) → `payload.email`, `payload.id`
- *   - content events (post, comment, reaction)       → `payload.author.email`, `payload.author.id`
- *   - some include `member.email` / `user.email`
+ * Engagement payload shapes vary across Mighty event types:
+ *   - PostCreated:       creator_id + content fields, NO email
+ *   - CommentCreated:    likely creator_id + post_id, possibly NO email
+ *   - ReactionCreated:   likely creator_id + target_id
+ *   - RsvpCreated:       member_id + event details
+ *   - CourseProgress*:   member_id-style payload
  *
- * We probe a small set of likely locations.
+ * Strategy:
+ *   1. Probe likely email locations
+ *   2. If none, take whichever member_id-shaped field is present and
+ *      look up the HubSpot contact by mighty_member_id to get the email
+ *   3. If neither — flag for review
  */
 type RawPayload = Record<string, unknown> & {
   id?: string | number;
@@ -20,33 +27,50 @@ type RawPayload = Record<string, unknown> & {
   author?: { id?: string | number; email?: string };
   member?: { id?: string | number; email?: string };
   user?: { id?: string | number; email?: string };
+  creator_id?: string | number;
+  member_id?: string | number;
+  author_id?: string | number;
+  user_id?: string | number;
 };
 
-function extractActor(payload: MightyWebhookPayload): {
+async function extractActor(payload: MightyWebhookPayload): Promise<{
   email: string;
   memberId: string;
-} | null {
+} | null> {
   const p = payload.payload as RawPayload;
-  const candidates = [
+
+  const directEmailCandidates = [
     { email: p.email, id: p.id },
     { email: p.author?.email, id: p.author?.id },
     { email: p.member?.email, id: p.member?.id },
     { email: p.user?.email, id: p.user?.id },
   ];
 
-  for (const c of candidates) {
+  for (const c of directEmailCandidates) {
     if (typeof c.email === "string" && c.email.length > 0) {
       return { email: c.email, memberId: String(c.id ?? "") };
     }
   }
-  return null;
+
+  // No email in payload — fall back to a member_id-shaped field and
+  // resolve the email via HubSpot's mighty_member_id custom property.
+  const memberIdRaw =
+    p.creator_id ?? p.member_id ?? p.author_id ?? p.user_id ?? p.member?.id ?? p.author?.id ?? p.id;
+  if (memberIdRaw === undefined) return null;
+
+  const memberId = String(memberIdRaw);
+  const contact = await findContactByMightyMemberId(memberId);
+  const email = contact?.properties?.email as string | undefined;
+  if (!email) return null;
+
+  return { email, memberId };
 }
 
 function makeEngagementHandler(eventType: EngagementEventType) {
   return async function handle(payload: MightyWebhookPayload): Promise<HandlerResult> {
-    const actor = extractActor(payload);
+    const actor = await extractActor(payload);
     if (!actor) {
-      return { success: false, message: "missing_actor_email" };
+      return { success: false, message: "missing_actor" };
     }
 
     const recorded = await recordEngagementEvent({
