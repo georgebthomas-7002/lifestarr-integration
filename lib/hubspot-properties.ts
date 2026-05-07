@@ -82,6 +82,26 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
     options: enumOptions(LIFESTARR_PLAN_STATUS_VALUES),
   },
   {
+    name: "lifestarr_central_intro_account_created_date",
+    label: "LifeStarr Central Intro Account Created Date",
+    description: "Date the member created their LifeStarr Central (Intro) account in Mighty.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "date",
+    fieldType: "date",
+  },
+  {
+    name: "lifestarr_central_account_created",
+    label: "LifeStarr Central Account Created",
+    description: "Yes once the member has created a LifeStarr Central account.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "bool",
+    fieldType: "booleancheckbox",
+    options: [
+      { label: "Yes", value: "true" },
+      { label: "No", value: "false" },
+    ],
+  },
+  {
     name: "lifestarr_premier_start_date",
     label: "LifeStarr Premier Start Date",
     description: "Date the member first activated a Premier plan.",
@@ -137,14 +157,31 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
   },
 ];
 
+/**
+ * HubSpot's standard lifecycle stages. We don't create this property —
+ * it ships with every HubSpot account — but we set its value on certain events.
+ */
+export type HubSpotLifecycleStage =
+  | "subscriber"
+  | "lead"
+  | "marketingqualifiedlead"
+  | "salesqualifiedlead"
+  | "opportunity"
+  | "customer"
+  | "evangelist"
+  | "other";
+
 export type LifestarrContactProps = {
   mighty_member_id?: string;
   lifestarr_plan?: LifestarrPlan;
   lifestarr_plan_status?: LifestarrPlanStatus;
+  lifestarr_central_intro_account_created_date?: string; // YYYY-MM-DD
+  lifestarr_central_account_created?: boolean;
   lifestarr_premier_start_date?: string; // YYYY-MM-DD
   lifestarr_premier_renewal_date?: string; // YYYY-MM-DD
   lifestarr_engagement_score?: number;
   lifestarr_premier_ready?: boolean;
   lifestarr_track?: LifestarrTrack;
   mighty_match_status?: MightyMatchStatus;
+  lifecyclestage?: HubSpotLifecycleStage;
 };

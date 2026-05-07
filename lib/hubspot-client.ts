@@ -85,6 +85,13 @@ function toHubspotProperties(input: Partial<ContactInput>): Record<string, strin
   if (input.lifestarr_plan_status !== undefined) {
     props.lifestarr_plan_status = input.lifestarr_plan_status;
   }
+  if (input.lifestarr_central_intro_account_created_date !== undefined) {
+    props.lifestarr_central_intro_account_created_date =
+      input.lifestarr_central_intro_account_created_date;
+  }
+  if (input.lifestarr_central_account_created !== undefined) {
+    props.lifestarr_central_account_created = String(input.lifestarr_central_account_created);
+  }
   if (input.lifestarr_premier_start_date !== undefined) {
     props.lifestarr_premier_start_date = input.lifestarr_premier_start_date;
   }
@@ -100,6 +107,9 @@ function toHubspotProperties(input: Partial<ContactInput>): Record<string, strin
   if (input.lifestarr_track !== undefined) props.lifestarr_track = input.lifestarr_track;
   if (input.mighty_match_status !== undefined) {
     props.mighty_match_status = input.mighty_match_status;
+  }
+  if (input.lifecyclestage !== undefined) {
+    props.lifecyclestage = input.lifecyclestage;
   }
   return props;
 }
