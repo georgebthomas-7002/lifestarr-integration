@@ -15,14 +15,14 @@ import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
  *   1. Member joined the community (initial signup)
  *   2. Member was added to a Mighty Space within the community
  *
- * In both cases the payload includes `payload.space_id` at the top level.
- * On (1), it's the "default" community space. On (2), it's the specific
- * space they were added to. Mighty fires the event N times for someone
- * added to N spaces.
+ * Both cases include `payload.space_id`. Mighty fires the event N times for
+ * someone added to N spaces, so we treat each fire as an idempotent upsert.
  *
- * Net behavior we want:
- *   - Identity / lifecycle / plan props: idempotent, set every time (cheap).
- *   - Space tracking: append the space to lifestarr_active_spaces, bump count.
+ * Space tracking writes to two HubSpot properties for different uses:
+ *   - lifestarr_spaces (multi-select): semicolon-separated space IDs.
+ *     Use for HubSpot list filtering / segmentation. Source of truth.
+ *   - lifestarr_active_spaces (text): comma-separated friendly names.
+ *     Human-readable mirror, derived from the multi-select via SPACE_NAMES.
  */
 export async function handleMemberJoined(
   payload: MightyWebhookPayload,
@@ -31,13 +31,13 @@ export async function handleMemberJoined(
   if (!member.email) return { success: false, message: "missing_email" };
 
   const p = payload.payload as Record<string, unknown>;
-  const spaceId = (p.space_id as string | number | undefined) ?? undefined;
+  const spaceIdRaw = p.space_id;
+  const spaceId = spaceIdRaw !== undefined && spaceIdRaw !== null ? String(spaceIdRaw) : undefined;
 
   const existing = await findContactByEmail(member.email);
   const matchStatus = existing ? "matched" : "new_contact_unverified";
   const joinedDate = toIsoDate(member.joined_at);
 
-  // Pass `existing` to skip the duplicate findContactByEmail inside upsertContact.
   const { contact, created } = await upsertWithMatchStatus(
     {
       email: member.email,
@@ -54,8 +54,6 @@ export async function handleMemberJoined(
     existing,
   );
 
-  // Lifecycle stage — separate update wrapped in try/catch so HubSpot's
-  // "no backward transition" rule (customer → SQL) doesn't break the handler.
   try {
     await updateContactProperties(contact.id, { lifecyclestage: "salesqualifiedlead" });
   } catch (err) {
@@ -65,28 +63,41 @@ export async function handleMemberJoined(
     );
   }
 
-  // Space tracking — when payload includes a space_id, append the space to
-  // the contact's active spaces list. Read prior values from the just-fetched
-  // contact when possible, else from `contact` (the upsert result).
+  // Space tracking. lifestarr_spaces is the source of truth (IDs); lifestarr_active_spaces
+  // is a derived human-readable mirror.
   let spaceMessage: string | undefined;
-  if (spaceId !== undefined) {
-    const priorContactProps = (existing ?? contact).properties as Record<string, string> | undefined;
-    const priorList = parseSpaceList(priorContactProps?.lifestarr_active_spaces);
-    const label = spaceLabel(spaceId);
-    if (!priorList.includes(label)) {
-      const updatedList = [...priorList, label];
+  if (spaceId) {
+    const priorProps = (existing ?? contact).properties as Record<string, string> | undefined;
+    const priorIds = parseMultiSelect(priorProps?.lifestarr_spaces);
+
+    if (!priorIds.includes(spaceId)) {
+      const updatedIds = [...priorIds, spaceId];
+      const updatedNames = updatedIds.map(spaceLabel);
+
       await updateContactProperties(contact.id, {
-        lifestarr_active_spaces: joinSpaceList(updatedList),
+        lifestarr_spaces: joinMultiSelect(updatedIds),
+        lifestarr_active_spaces: joinNames(updatedNames),
         lifestarr_last_space_joined_at: toIsoDate(member.joined_at),
-        lifestarr_space_membership_count: updatedList.length,
+        lifestarr_space_membership_count: updatedIds.length,
       });
+
       const track = spaceTrack(spaceId);
       if (track) {
-        await updateContactProperties(contact.id, { lifestarr_track: track });
+        try {
+          await updateContactProperties(contact.id, { lifestarr_track: track });
+        } catch (err) {
+          console.warn(
+            `[member-joined] track update skipped for ${contact.id}:`,
+            err instanceof Error ? err.message : String(err),
+          );
+        }
       }
-      spaceMessage = `+space[${label}]_total=${updatedList.length}${track ? `_track=${track}` : ""}`;
+
+      spaceMessage = `+space[${spaceLabel(spaceId)}]_total=${updatedIds.length}${
+        track ? `_track=${track}` : ""
+      }`;
     } else {
-      spaceMessage = `space[${label}]_already_recorded`;
+      spaceMessage = `space[${spaceLabel(spaceId)}]_already_recorded`;
     }
   }
 
@@ -109,14 +120,18 @@ export async function handleMemberJoined(
   };
 }
 
-function parseSpaceList(raw: string | null | undefined): string[] {
+function parseMultiSelect(raw: string | null | undefined): string[] {
   if (!raw) return [];
   return raw
-    .split(",")
+    .split(";")
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
-function joinSpaceList(spaces: string[]): string {
-  return Array.from(new Set(spaces)).sort().join(", ");
+function joinMultiSelect(ids: string[]): string {
+  return Array.from(new Set(ids)).join(";");
+}
+
+function joinNames(names: string[]): string {
+  return Array.from(new Set(names)).join(", ");
 }

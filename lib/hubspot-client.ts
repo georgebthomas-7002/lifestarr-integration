@@ -94,6 +94,7 @@ export async function findContactByMightyMemberId(
         "email",
         "mighty_member_id",
         "lifestarr_active_spaces",
+        "lifestarr_spaces",
         "lifestarr_space_membership_count",
       ],
       limit: 1,
@@ -126,6 +127,9 @@ export async function findContactByEmail(email: string): Promise<SimplePublicObj
         "lifestarr_plan_status",
         "lifestarr_engagement_score",
         "mighty_match_status",
+        "lifestarr_active_spaces",
+        "lifestarr_spaces",
+        "lifestarr_space_membership_count",
       ],
       limit: 1,
       sorts: [],
@@ -188,6 +192,9 @@ function toHubspotProperties(input: Partial<ContactInput>): Record<string, strin
   }
   if (input.lifestarr_active_spaces !== undefined) {
     props.lifestarr_active_spaces = input.lifestarr_active_spaces;
+  }
+  if (input.lifestarr_spaces !== undefined) {
+    props.lifestarr_spaces = input.lifestarr_spaces;
   }
   if (input.lifestarr_last_space_joined_at !== undefined) {
     props.lifestarr_last_space_joined_at = input.lifestarr_last_space_joined_at;

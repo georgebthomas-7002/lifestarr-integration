@@ -13,33 +13,26 @@ import { spaceLabel } from "@/lib/space-config";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
 /**
- * Mighty fires MemberLeft when a member leaves a Mighty Space.
- * Payload shape mirrors MemberJoined:
- *   {
- *     member: { id, email, first_name, ... },
- *     space_id: 18257656,
- *     network_id: 12946344
- *   }
+ * Mighty fires MemberLeft when a member leaves a Mighty Space. Same
+ * payload shape as MemberJoined.
  *
  * NOTE: this is space-level departure, not "left the entire community".
  * Plan/lifecycle properties are managed by the dedicated subscription
- * handlers (Canceled / RemovedFromPlan), so we deliberately don't touch
- * them here.
+ * handlers (Canceled / RemovedFromPlan), so we don't touch them here.
  */
 export async function handleMemberLeft(
   payload: MightyWebhookPayload,
 ): Promise<HandlerResult> {
   const member = extractMember(payload);
   const p = payload.payload as Record<string, unknown>;
-  const spaceId = (p.space_id as string | number | undefined) ?? undefined;
+  const spaceIdRaw = p.space_id;
+  const spaceId = spaceIdRaw !== undefined && spaceIdRaw !== null ? String(spaceIdRaw) : undefined;
 
-  if (spaceId === undefined) {
+  if (!spaceId) {
     return { success: false, message: "missing_space_id" };
   }
 
-  // Try email first, fall back to mighty_member_id lookup
-  let contact =
-    member.email ? await findContactByEmail(member.email) : null;
+  let contact = member.email ? await findContactByEmail(member.email) : null;
   if (!contact && member.id !== undefined) {
     contact = await findContactByMightyMemberId(member.id);
   }
@@ -58,33 +51,37 @@ export async function handleMemberLeft(
     };
   }
 
-  const priorList = parseSpaceList(
-    (contact.properties as Record<string, string> | undefined)?.lifestarr_active_spaces,
-  );
-  const label = spaceLabel(spaceId);
-  const updatedList = priorList.filter((s) => s !== label);
+  const props = contact.properties as Record<string, string> | undefined;
+  const priorIds = parseMultiSelect(props?.lifestarr_spaces);
+  const updatedIds = priorIds.filter((id) => id !== spaceId);
+  const updatedNames = updatedIds.map(spaceLabel);
 
   await updateContactProperties(contact.id, {
-    lifestarr_active_spaces: joinSpaceList(updatedList),
+    lifestarr_spaces: joinMultiSelect(updatedIds),
+    lifestarr_active_spaces: joinNames(updatedNames),
     lifestarr_last_space_left_at: toIsoDate(member.removed_at) || todayISO(),
-    lifestarr_space_membership_count: updatedList.length,
+    lifestarr_space_membership_count: updatedIds.length,
   });
 
   return {
     success: true,
     hubspotContactId: contact.id,
-    message: `-space[${label}]_total=${updatedList.length}`,
+    message: `-space[${spaceLabel(spaceId)}]_total=${updatedIds.length}`,
   };
 }
 
-function parseSpaceList(raw: string | null | undefined): string[] {
+function parseMultiSelect(raw: string | null | undefined): string[] {
   if (!raw) return [];
   return raw
-    .split(",")
+    .split(";")
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
-function joinSpaceList(spaces: string[]): string {
-  return Array.from(new Set(spaces)).sort().join(", ");
+function joinMultiSelect(ids: string[]): string {
+  return Array.from(new Set(ids)).join(";");
+}
+
+function joinNames(names: string[]): string {
+  return Array.from(new Set(names)).join(", ");
 }

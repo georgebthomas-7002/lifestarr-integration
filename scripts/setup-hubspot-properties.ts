@@ -30,6 +30,7 @@ const FIELD_TYPE_MAP: Record<ContactPropertyDef["fieldType"], PropertyCreateFiel
   select: PropertyCreateFieldTypeEnum.Select,
   radio: PropertyCreateFieldTypeEnum.Radio,
   booleancheckbox: PropertyCreateFieldTypeEnum.Booleancheckbox,
+  checkbox: PropertyCreateFieldTypeEnum.Checkbox, // multi-select
 };
 
 const token = process.env.HUBSPOT_API_TOKEN;

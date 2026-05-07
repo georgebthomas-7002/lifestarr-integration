@@ -7,6 +7,8 @@
  *   - lib/handlers/* (set property values when events arrive)
  */
 
+import { ALL_SPACE_IDS, SPACE_NAMES } from "@/lib/space-config";
+
 export const LIFESTARR_PROPERTY_GROUP = "lifestarr";
 
 export type EnumOption = { label: string; value: string };
@@ -17,7 +19,14 @@ export type ContactPropertyDef = {
   description: string;
   groupName: string;
   type: "string" | "number" | "datetime" | "date" | "enumeration" | "bool";
-  fieldType: "text" | "number" | "date" | "select" | "radio" | "booleancheckbox";
+  fieldType:
+    | "text"
+    | "number"
+    | "date"
+    | "select"
+    | "radio"
+    | "booleancheckbox"
+    | "checkbox"; // multi-select
   options?: EnumOption[];
 };
 
@@ -196,11 +205,24 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
   },
   {
     name: "lifestarr_active_spaces",
-    label: "LifeStarr Active Spaces",
-    description: "Comma-separated names of Mighty spaces the member currently belongs to.",
+    label: "LifeStarr Active Spaces (text)",
+    description: "Comma-separated names of Mighty spaces the member currently belongs to. Human-readable mirror of lifestarr_spaces.",
     groupName: LIFESTARR_PROPERTY_GROUP,
     type: "string",
     fieldType: "text",
+  },
+  {
+    name: "lifestarr_spaces",
+    label: "LifeStarr Spaces",
+    description:
+      "Multi-select of Mighty spaces the member currently belongs to. Use this for filtering / list segmentation in HubSpot.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "enumeration",
+    fieldType: "checkbox", // multi-select
+    options: ALL_SPACE_IDS.map((id) => ({
+      label: SPACE_NAMES[id] ?? id,
+      value: id,
+    })),
   },
   {
     name: "lifestarr_last_space_joined_at",
@@ -263,6 +285,8 @@ export type LifestarrContactProps = {
   lifestarr_premier_ready?: boolean;
   lifestarr_track?: LifestarrTrack;
   lifestarr_active_spaces?: string;
+  /** HubSpot multi-select: semicolon-separated space ids, e.g. "20821655;22596625" */
+  lifestarr_spaces?: string;
   lifestarr_last_space_joined_at?: string; // YYYY-MM-DD
   lifestarr_last_space_left_at?: string; // YYYY-MM-DD
   lifestarr_space_membership_count?: number;
