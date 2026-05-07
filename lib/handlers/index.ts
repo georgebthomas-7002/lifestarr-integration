@@ -14,6 +14,12 @@ import { handleMemberRemovedFromPlan } from "./member-removed-from-plan";
 import { handleMemberSubscriptionCanceled } from "./member-subscription-canceled";
 import { handleMemberSubscriptionRenewed } from "./member-subscription-renewed";
 import { handleMemberUpdated } from "./member-updated";
+import {
+  handleCommentDeleted,
+  handleCommentUpdated,
+  handlePostDeleted,
+  handlePostUpdated,
+} from "./noop-events";
 
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
@@ -40,4 +46,10 @@ export const handlers: Record<string, WebhookHandler> = {
   CommentCreated: handleCommentCreated,
   RsvpCreated: handleRsvpCreated,
   ReactionCreated: handleReactionCreated,
+
+  // Intentionally not counted toward engagement (edits/deletes aren't new activity)
+  PostUpdated: handlePostUpdated,
+  CommentUpdated: handleCommentUpdated,
+  PostDeleted: handlePostDeleted,
+  CommentDeleted: handleCommentDeleted,
 };
