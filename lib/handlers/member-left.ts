@@ -54,11 +54,9 @@ export async function handleMemberLeft(
   const props = contact.properties as Record<string, string> | undefined;
   const priorIds = parseMultiSelect(props?.lifestarr_spaces);
   const updatedIds = priorIds.filter((id) => id !== spaceId);
-  const updatedNames = updatedIds.map(spaceLabel);
 
   await updateContactProperties(contact.id, {
     lifestarr_spaces: joinMultiSelect(updatedIds),
-    lifestarr_active_spaces: joinNames(updatedNames),
     lifestarr_last_space_left_at: toIsoDate(member.removed_at) || todayISO(),
     lifestarr_space_membership_count: updatedIds.length,
   });
@@ -80,8 +78,4 @@ function parseMultiSelect(raw: string | null | undefined): string[] {
 
 function joinMultiSelect(ids: string[]): string {
   return Array.from(new Set(ids)).join(";");
-}
-
-function joinNames(names: string[]): string {
-  return Array.from(new Set(names)).join(", ");
 }

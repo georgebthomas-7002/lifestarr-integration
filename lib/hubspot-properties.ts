@@ -204,14 +204,6 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
     options: enumOptions(LIFESTARR_TRACK_VALUES),
   },
   {
-    name: "lifestarr_active_spaces",
-    label: "LifeStarr Active Spaces (text)",
-    description: "Comma-separated names of Mighty spaces the member currently belongs to. Human-readable mirror of lifestarr_spaces.",
-    groupName: LIFESTARR_PROPERTY_GROUP,
-    type: "string",
-    fieldType: "text",
-  },
-  {
     name: "lifestarr_spaces",
     label: "LifeStarr Spaces",
     description:
@@ -284,7 +276,6 @@ export type LifestarrContactProps = {
   lifestarr_engagement_score?: number;
   lifestarr_premier_ready?: boolean;
   lifestarr_track?: LifestarrTrack;
-  lifestarr_active_spaces?: string;
   /** HubSpot multi-select: semicolon-separated space ids, e.g. "20821655;22596625" */
   lifestarr_spaces?: string;
   lifestarr_last_space_joined_at?: string; // YYYY-MM-DD

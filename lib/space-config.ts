@@ -5,10 +5,10 @@ import type { LifestarrTrack } from "@/lib/hubspot-properties";
  * Source: George's list, 2026-05-07.
  *
  * Used by:
- *   - lib/handlers/member-joined.ts + member-left.ts to write friendly names
- *     to lifestarr_active_spaces (text) and space ids to lifestarr_spaces
- *     (multi-select)
+ *   - lib/handlers/member-joined.ts + member-left.ts to write space IDs to
+ *     the lifestarr_spaces multi-select property
  *   - lib/hubspot-properties.ts to define the multi-select option list
+ *     (each option's label = space name, value = space_id)
  */
 export const SPACE_NAMES: Record<string, string> = {
   // START HERE

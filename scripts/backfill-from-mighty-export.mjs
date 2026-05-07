@@ -201,7 +201,6 @@ function transformRow(row) {
 
   if (matchedIds.length > 0) {
     props.lifestarr_spaces = matchedIds.join(";");
-    props.lifestarr_active_spaces = matchedIds.map((id) => SPACE_NAMES[id]).join(", ");
     props.lifestarr_space_membership_count = String(matchedIds.length);
   }
   if (trackFromSpaces) props.lifestarr_track = trackFromSpaces;

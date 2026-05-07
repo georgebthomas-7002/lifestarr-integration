@@ -124,7 +124,7 @@ To verify: when the next real `MemberPurchased` event lands, check `webhook_even
 | `LiveCallStartedHook` / `LiveCallAttendedHook` | call_id, attended_at, duration | ❌ — live attendance is a strong engagement signal. |
 | `DirectMessageSentHook` | sender, recipient, sent_at | ❌ — usually high-noise; consider only if you want DM activity in HubSpot. |
 
-### Space / community structure
+### Space / community structure (currently fully wired)
 
 | Mighty event             | Payload typically includes          | Wired?                                                          |
 | ------------------------ | ----------------------------------- | --------------------------------------------------------------- |
@@ -138,7 +138,8 @@ To verify: when the next real `MemberPurchased` event lands, check `webhook_even
 
 Bucketed by purpose. Each row is a property we'd create in the `lifestarr` group, plus the Mighty data that would feed it.
 
-### Identity / profile (capture more from MemberJoined / MemberUpdated)
+### Identity / profile (capture more from MemberJoined / MemberUpdated) - (currently fully wired)
+
 
 | New property                     | Type              | Source                                           | Why useful                                                   |
 | -------------------------------- | ----------------- | ------------------------------------------------ | ------------------------------------------------------------ |

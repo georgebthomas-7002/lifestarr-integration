@@ -18,11 +18,10 @@ import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
  * Both cases include `payload.space_id`. Mighty fires the event N times for
  * someone added to N spaces, so we treat each fire as an idempotent upsert.
  *
- * Space tracking writes to two HubSpot properties for different uses:
- *   - lifestarr_spaces (multi-select): semicolon-separated space IDs.
- *     Use for HubSpot list filtering / segmentation. Source of truth.
- *   - lifestarr_active_spaces (text): comma-separated friendly names.
- *     Human-readable mirror, derived from the multi-select via SPACE_NAMES.
+ * Space tracking writes to lifestarr_spaces (multi-select), where each option
+ * is keyed by space_id with the friendly name as its label. HubSpot's UI
+ * shows the names as chips on the contact record AND lets lists filter by
+ * "is any of [Foundation Path, Decision Coach]".
  */
 export async function handleMemberJoined(
   payload: MightyWebhookPayload,
@@ -63,8 +62,7 @@ export async function handleMemberJoined(
     );
   }
 
-  // Space tracking. lifestarr_spaces is the source of truth (IDs); lifestarr_active_spaces
-  // is a derived human-readable mirror.
+  // Space tracking via the multi-select (HubSpot renders the friendly names).
   let spaceMessage: string | undefined;
   if (spaceId) {
     const priorProps = (existing ?? contact).properties as Record<string, string> | undefined;
@@ -72,11 +70,9 @@ export async function handleMemberJoined(
 
     if (!priorIds.includes(spaceId)) {
       const updatedIds = [...priorIds, spaceId];
-      const updatedNames = updatedIds.map(spaceLabel);
 
       await updateContactProperties(contact.id, {
         lifestarr_spaces: joinMultiSelect(updatedIds),
-        lifestarr_active_spaces: joinNames(updatedNames),
         lifestarr_last_space_joined_at: toIsoDate(member.joined_at),
         lifestarr_space_membership_count: updatedIds.length,
       });
@@ -130,8 +126,4 @@ function parseMultiSelect(raw: string | null | undefined): string[] {
 
 function joinMultiSelect(ids: string[]): string {
   return Array.from(new Set(ids)).join(";");
-}
-
-function joinNames(names: string[]): string {
-  return Array.from(new Set(names)).join(", ");
 }
