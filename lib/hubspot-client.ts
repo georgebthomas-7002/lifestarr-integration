@@ -11,31 +11,26 @@ import type { LifestarrContactProps } from "@/lib/hubspot-properties";
 
 /**
  * Properties applied only on contact CREATE — never on update — so we don't
- * clobber legitimate ownership / marketing flags on contacts that already
- * exist in HubSpot.
+ * clobber legitimate ownership on contacts that already exist in HubSpot.
  *
- * NOTE on traffic-source attribution: we do NOT try to set
- *   - hs_latest_source_data_2
- *   - hs_object_source_detail_1
- *   - hs_latest_source
- * HubSpot rejects all three:
- *   - the two `*_detail_*` / `*_data_*` properties are READ_ONLY in the CRM
- *     API — HubSpot derives them automatically from the calling app's
- *     Private App identity. With Zapier disabled, new contacts auto-attribute
- *     to "LifeStarr Integration Hub" (our Private App name) — no override
- *     needed.
- *   - hs_latest_source's allowed enum doesn't include "INTEGRATION" or any
- *     LifeStarr-flavored value, so we leave HubSpot to auto-set it.
+ * Properties NOT set here, with reasoning:
  *
- * If the auto-detected source label ever needs to change, rename the Private
- * App in HubSpot Settings → Integrations → Private Apps. That label is what
- * shows up in HubSpot's source drill-downs.
+ * - `hs_latest_source` / `hs_latest_source_data_2` / `hs_object_source_detail_1`
+ *   are READ_ONLY in the CRM API — HubSpot derives them automatically from
+ *   the calling Private App's identity. With Zapier disabled, new contacts
+ *   auto-attribute to our Private App. To change the displayed label,
+ *   rename the Private App in HubSpot Settings → Integrations → Private Apps.
+ *
+ * - `hs_marketable_status` (Marketing Contact toggle) is managed by HubSpot
+ *   internally — the property is `readOnlyValue: true` and the dedicated
+ *   marketing-contacts API endpoints return 404 in this account. The proper
+ *   way to flip new contacts to Marketing Contact is a HubSpot Workflow:
+ *     trigger: `lifestarr_central_account_created` is true
+ *     action:  Set marketing contact status → Marketing
+ *   See docs/property-mapping-audit-2026-05-07.md for context.
  */
 function buildCreateOnlyProps(): Record<string, string> {
-  const props: Record<string, string> = {
-    // Mark new contacts as Marketing Contacts in HubSpot's Marketing Hub.
-    hs_marketable_status: "MARKETING_CONTACT",
-  };
+  const props: Record<string, string> = {};
   const ownerId = process.env.HUBSPOT_DEFAULT_CONTACT_OWNER_ID;
   if (ownerId) props.hubspot_owner_id = ownerId;
   return props;
