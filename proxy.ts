@@ -10,11 +10,11 @@ import { auth } from "@/auth";
  * session even if this redirect is bypassed.
  */
 
-// TEMPORARY: auth gating bypassed while waiting for Joe's Resend domain
-// verification. Flip back to `false` (or delete this constant) once
-// magic-link sign-in works for all allowlisted users.
-// See docs/go-live-runbook.md for the full restore steps.
-const BYPASS_AUTH = true;
+// Auth gate is enforced. Resend's lifestarr.com domain is verified, so all
+// allowlisted users can receive magic-link emails from mail@lifestarr.com.
+// Flipping this to true would re-disable the gate (emergency dashboard
+// access) — don't do that without a really good reason.
+const BYPASS_AUTH = false;
 
 export default auth((req) => {
   if (BYPASS_AUTH) return;
