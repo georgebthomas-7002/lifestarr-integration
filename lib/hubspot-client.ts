@@ -27,6 +27,8 @@ function buildCreateOnlyProps(): Record<string, string> {
     hs_latest_source: "INTEGRATION",
     hs_latest_source_data_2: "LifeStarr Integration",
     hs_object_source_detail_1: "LifeStarr Integration",
+    // Mark new contacts as Marketing Contacts in HubSpot's Marketing Hub.
+    hs_marketable_status: "MARKETING_CONTACT",
   };
   const ownerId = process.env.HUBSPOT_DEFAULT_CONTACT_OWNER_ID;
   if (ownerId) props.hubspot_owner_id = ownerId;

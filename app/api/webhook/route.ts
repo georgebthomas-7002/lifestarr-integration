@@ -8,7 +8,7 @@ import {
   ENGAGEMENT_EVENT_TYPES,
 } from "@/lib/integrations-config";
 import { applyOutcome } from "@/lib/process-outcome";
-import { dispatch } from "@/lib/router";
+import { dispatch, normalizeEventType } from "@/lib/router";
 import type { MightyWebhookPayload } from "@/lib/types";
 import { verifyMightyWebhook } from "@/lib/verify-webhook";
 
@@ -35,6 +35,11 @@ export async function POST(req: Request) {
   ) {
     return NextResponse.json({ error: "missing_required_fields" }, { status: 400 });
   }
+
+  // Mighty's actual event_type strings end in "Hook" (e.g. "MemberJoinedHook").
+  // Normalize before storing/dispatching so the rest of the system uses the
+  // clean names ("MemberJoined") that handlers + integrations table key on.
+  body.event_type = normalizeEventType(body.event_type);
 
   const existing = await db
     .select()

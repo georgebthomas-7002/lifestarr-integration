@@ -12,6 +12,7 @@ import { handleMemberPurchased } from "./member-purchased";
 import { handleMemberRemovedFromPlan } from "./member-removed-from-plan";
 import { handleMemberSubscriptionCanceled } from "./member-subscription-canceled";
 import { handleMemberSubscriptionRenewed } from "./member-subscription-renewed";
+import { handleMemberUpdated } from "./member-updated";
 
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
@@ -19,7 +20,9 @@ export type WebhookHandler = (payload: MightyWebhookPayload) => Promise<HandlerR
 
 export const handlers: Record<string, WebhookHandler> = {
   // Tier 1: lifecycle / monetization
+  // (event_type values are normalized — Mighty's "MemberJoinedHook" → "MemberJoined")
   MemberJoined: handleMemberJoined,
+  MemberUpdated: handleMemberUpdated,
   MemberPurchased: handleMemberPurchased,
   MemberPlanChanged: handleMemberPlanChanged,
   MemberSubscriptionCanceled: handleMemberSubscriptionCanceled,

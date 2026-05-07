@@ -5,11 +5,21 @@ export type DispatchOutcome =
   | { kind: "handled"; handlerName: string; result: HandlerResult }
   | { kind: "no_handler"; eventType: string };
 
+/**
+ * Mighty's actual event_type strings end in "Hook" (e.g. "MemberJoinedHook")
+ * even though their docs and webhook UI call them "Member Joined".
+ * Strip the suffix so handler-registry keys stay clean ("MemberJoined").
+ */
+export function normalizeEventType(eventType: string): string {
+  return eventType.replace(/Hook$/, "");
+}
+
 export async function dispatch(payload: MightyWebhookPayload): Promise<DispatchOutcome> {
-  const handler = handlers[payload.event_type];
+  const normalized = normalizeEventType(payload.event_type);
+  const handler = handlers[normalized];
   if (!handler) {
-    return { kind: "no_handler", eventType: payload.event_type };
+    return { kind: "no_handler", eventType: normalized };
   }
   const result = await handler(payload);
-  return { kind: "handled", handlerName: payload.event_type, result };
+  return { kind: "handled", handlerName: normalized, result };
 }
