@@ -9,12 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const ACCENT_ROTATION = [
+  "bg-brand-teal",
+  "bg-brand-orange",
+  "bg-brand-yellow",
+  "bg-brand-pink",
+] as const;
+
 export default async function StatusGridPage() {
   const rows = await db.select().from(integrations);
   const byEventType = new Map(rows.map((r) => [r.eventType, r]));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header>
         <h2 className="text-2xl font-semibold tracking-tight">Integration Status</h2>
         <p className="text-sm text-muted-foreground">
@@ -23,8 +30,8 @@ export default async function StatusGridPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {INTEGRATION_CARDS.map((card) => {
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {INTEGRATION_CARDS.map((card, idx) => {
           const row = byEventType.get(card.eventType);
           const status = (row?.status ?? card.defaultStatus) as
             | "live"
@@ -34,17 +41,19 @@ export default async function StatusGridPage() {
           const successCount = row?.successCount ?? 0;
           const failureCount = row?.failureCount ?? 0;
           const lastFiredAt = row?.lastFiredAt ?? null;
+          const accent = ACCENT_ROTATION[idx % ACCENT_ROTATION.length];
 
           return (
-            <Card key={card.eventType} className="flex flex-col">
-              <CardHeader>
+            <Card key={card.eventType} className="flex flex-col overflow-hidden p-0">
+              <div className={`h-1 ${accent}`} />
+              <CardHeader className="pt-6">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base leading-tight">{card.name}</CardTitle>
                   <IntegrationStatusBadge status={status} />
                 </div>
                 <CardDescription className="leading-relaxed">{card.description}</CardDescription>
               </CardHeader>
-              <CardContent className="mt-auto space-y-3">
+              <CardContent className="mt-auto space-y-3 pb-6">
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <Stat label="Success" value={successCount.toString()} tone="positive" />
                   <Stat label="Failures" value={failureCount.toString()} tone={failureCount > 0 ? "negative" : "neutral"} />

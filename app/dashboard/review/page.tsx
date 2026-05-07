@@ -41,7 +41,7 @@ export default async function ReviewPage({
     .where(eq(needsReviewQueue.resolved, false));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Needs Review</h2>
