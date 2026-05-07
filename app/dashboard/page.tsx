@@ -4,6 +4,7 @@ import { relativeTime } from "@/lib/format-time";
 
 import { StatusToggle } from "./status-toggle";
 import { IntegrationStatusBadge } from "@/components/status-badge";
+import { StatsStrip } from "@/components/stats-strip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function StatusGridPage() {
 
   return (
     <div className="space-y-8">
+      <StatsStrip />
       <header>
         <h2 className="text-2xl font-semibold tracking-tight">Integration Status</h2>
         <p className="text-sm text-muted-foreground">

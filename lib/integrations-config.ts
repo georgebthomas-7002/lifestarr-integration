@@ -29,7 +29,19 @@ export const INTEGRATION_CARDS: IntegrationCardConfig[] = [
   {
     eventType: "MemberJoined",
     name: "Member Joined → HubSpot Contact",
-    description: "Creates or matches a HubSpot contact when someone joins the Mighty community.",
+    description: "Creates or matches a HubSpot contact when someone joins the Mighty community or a Mighty space.",
+    defaultStatus: "live",
+  },
+  {
+    eventType: "MemberUpdated",
+    name: "Member Updated → HubSpot Profile Sync",
+    description: "Refreshes name, bio, location, timezone, and avatar on profile edits.",
+    defaultStatus: "live",
+  },
+  {
+    eventType: "MemberLeft",
+    name: "Member Left → HubSpot Space Update",
+    description: "Removes the space from the contact's active spaces and decrements membership count.",
     defaultStatus: "live",
   },
   {

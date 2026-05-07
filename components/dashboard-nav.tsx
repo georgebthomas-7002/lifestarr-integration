@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertCircle, GitBranch, LayoutDashboard, Settings } from "lucide-react";
+import { Activity, AlertCircle, GitBranch, LayoutDashboard, Settings, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Status", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/activity", label: "Activity", icon: Activity, exact: false },
   { href: "/dashboard/progress", label: "Build Progress", icon: GitBranch, exact: false },
+  { href: "/dashboard/engagement", label: "Engagement", icon: Sparkles, exact: false },
   { href: "/dashboard/review", label: "Needs Review", icon: AlertCircle, exact: false },
   { href: "/dashboard/settings", label: "Settings", icon: Settings, exact: false },
 ];

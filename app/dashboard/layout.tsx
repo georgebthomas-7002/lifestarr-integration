@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { auth, signOut } from "@/auth";
 import { DashboardNav } from "@/components/dashboard-nav";
+import { HealthBadge } from "@/components/health-badge";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -31,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="flex h-14 items-center justify-between border-b bg-card px-6">
           <h1 className="text-sm font-medium md:text-base">Operations Dashboard</h1>
           <div className="flex items-center gap-3 text-xs">
+            <HealthBadge />
             {session?.user?.email ? (
               <>
                 <span className="text-muted-foreground">{session.user.email}</span>
