@@ -11,8 +11,13 @@ import { eq } from "drizzle-orm";
 
 /**
  * Map Mighty plan info to our LifeStarr plan enum.
- * Prefers plan.type ("free" | "paid") since it's the most reliable signal.
- * Falls back to name keywords for safety.
+ *
+ * NAME keywords are primary — "PREMIER" or "INTRO" in plan_name win.
+ * This is required because LifeStarr's Premier plan has plan.type = "free"
+ * (it's a free perk, not a paid subscription), so trusting plan.type alone
+ * misclassified Premier as intro. The name is the ground truth.
+ *
+ * type and interval are tiebreakers when name doesn't say.
  *
  * Mighty's actual interval values are "month" / "year" (not "monthly" / "yearly").
  */
@@ -25,17 +30,24 @@ export function mapMightyPlan(plan: {
   const type = (plan.plan_type ?? "").toLowerCase();
   const interval = (plan.interval ?? "").toLowerCase();
 
-  if (type === "free" || name.includes("intro")) return "intro";
-  if (type === "paid") {
+  if (name.includes("premier")) {
     if (interval === "year" || interval === "yearly" || interval === "annual" || name.includes("annual")) {
       return "premier_annual";
     }
-    // Default paid → monthly (covers "month", "monthly", and unknown cadences)
     return "premier_monthly";
   }
-  // Legacy fallback for events where type is missing
-  if (name.includes("annual") || interval === "year" || interval === "yearly") return "premier_annual";
-  if (name.includes("premier") || interval === "month" || interval === "monthly") return "premier_monthly";
+  if (name.includes("intro")) return "intro";
+
+  // Name didn't disambiguate — fall back to type/interval
+  if (type === "paid") {
+    if (interval === "year" || interval === "yearly" || interval === "annual") return "premier_annual";
+    return "premier_monthly";
+  }
+  if (type === "free") return "intro";
+
+  // Legacy fallback for events where neither name nor type hints
+  if (interval === "year" || interval === "yearly") return "premier_annual";
+  if (interval === "month" || interval === "monthly") return "premier_monthly";
   return "none";
 }
 
