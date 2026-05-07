@@ -33,7 +33,7 @@ export default async function LoginPage({
   if (error === "AccessDenied") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-xl">
           <CardHeader>
             <CardTitle>Access denied</CardTitle>
             <CardDescription>
@@ -55,7 +55,7 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <Mail className="h-5 w-5 text-primary" />
