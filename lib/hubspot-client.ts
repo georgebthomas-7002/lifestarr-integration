@@ -74,6 +74,39 @@ export type ContactInput = {
   lastName?: string;
 } & LifestarrContactProps;
 
+export async function findContactByMightyMemberId(
+  mightyMemberId: string | number,
+): Promise<SimplePublicObject | null> {
+  try {
+    const search: PublicObjectSearchRequest = {
+      filterGroups: [
+        {
+          filters: [
+            {
+              propertyName: "mighty_member_id",
+              operator: FilterOperatorEnum.Eq,
+              value: String(mightyMemberId),
+            },
+          ],
+        },
+      ],
+      properties: [
+        "email",
+        "mighty_member_id",
+        "lifestarr_active_spaces",
+        "lifestarr_space_membership_count",
+      ],
+      limit: 1,
+      sorts: [],
+      after: "0",
+    };
+    const res = await getClient().crm.contacts.searchApi.doSearch(search);
+    return res.results[0] ?? null;
+  } catch (err) {
+    throw new HubSpotClientError(`findContactByMightyMemberId(${mightyMemberId})`, err);
+  }
+}
+
 export async function findContactByEmail(email: string): Promise<SimplePublicObject | null> {
   try {
     const search: PublicObjectSearchRequest = {
@@ -135,6 +168,18 @@ function toHubspotProperties(input: Partial<ContactInput>): Record<string, strin
     props.lifestarr_premier_ready = String(input.lifestarr_premier_ready);
   }
   if (input.lifestarr_track !== undefined) props.lifestarr_track = input.lifestarr_track;
+  if (input.lifestarr_active_spaces !== undefined) {
+    props.lifestarr_active_spaces = input.lifestarr_active_spaces;
+  }
+  if (input.lifestarr_last_space_joined_at !== undefined) {
+    props.lifestarr_last_space_joined_at = input.lifestarr_last_space_joined_at;
+  }
+  if (input.lifestarr_last_space_left_at !== undefined) {
+    props.lifestarr_last_space_left_at = input.lifestarr_last_space_left_at;
+  }
+  if (input.lifestarr_space_membership_count !== undefined) {
+    props.lifestarr_space_membership_count = String(input.lifestarr_space_membership_count);
+  }
   if (input.mighty_match_status !== undefined) {
     props.mighty_match_status = input.mighty_match_status;
   }

@@ -147,6 +147,38 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
     options: enumOptions(LIFESTARR_TRACK_VALUES),
   },
   {
+    name: "lifestarr_active_spaces",
+    label: "LifeStarr Active Spaces",
+    description: "Comma-separated names of Mighty spaces the member currently belongs to.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_last_space_joined_at",
+    label: "LifeStarr Last Space Joined Date",
+    description: "Date of the most recent SpaceMemberAdded event for this member.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "date",
+    fieldType: "date",
+  },
+  {
+    name: "lifestarr_last_space_left_at",
+    label: "LifeStarr Last Space Left Date",
+    description: "Date of the most recent SpaceMemberRemoved event for this member.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "date",
+    fieldType: "date",
+  },
+  {
+    name: "lifestarr_space_membership_count",
+    label: "LifeStarr Space Membership Count",
+    description: "How many Mighty spaces the member is currently in.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "number",
+    fieldType: "number",
+  },
+  {
     name: "mighty_match_status",
     label: "Mighty Match Status",
     description: "Quality of identity match between Mighty and HubSpot for this contact.",
@@ -182,6 +214,10 @@ export type LifestarrContactProps = {
   lifestarr_engagement_score?: number;
   lifestarr_premier_ready?: boolean;
   lifestarr_track?: LifestarrTrack;
+  lifestarr_active_spaces?: string;
+  lifestarr_last_space_joined_at?: string; // YYYY-MM-DD
+  lifestarr_last_space_left_at?: string; // YYYY-MM-DD
+  lifestarr_space_membership_count?: number;
   mighty_match_status?: MightyMatchStatus;
   lifecyclestage?: HubSpotLifecycleStage;
 };

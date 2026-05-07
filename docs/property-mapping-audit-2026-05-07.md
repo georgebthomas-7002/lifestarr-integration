@@ -126,11 +126,11 @@ To verify: when the next real `MemberPurchased` event lands, check `webhook_even
 
 ### Space / community structure
 
-| Mighty event | Payload typically includes | Wired? |
-|---|---|---|
-| `SpaceCreatedHook` | space_id, creator, created_at, type | ❌ — only relevant if LifeStarr lets members create spaces. |
-| `SpaceMemberAddedHook` | space_id, member_id, added_at | ❌ — could populate a "tracks" property if spaces map to tracks. |
-| `SpaceMemberRemovedHook` | space_id, member_id, removed_at | ❌ |
+| Mighty event             | Payload typically includes          | Wired?                                                          |
+| ------------------------ | ----------------------------------- | --------------------------------------------------------------- |
+| `SpaceCreatedHook`       | space_id, creator, created_at, type | ❌ — only relevant if LifeStarr lets members create spaces.      |
+| `SpaceMemberAddedHook`   | space_id, member_id, added_at       | ❌ — could populate a "tracks" property if spaces map to tracks. |
+| `SpaceMemberRemovedHook` | space_id, member_id, removed_at     | ❌                                                               |
 
 ---
 

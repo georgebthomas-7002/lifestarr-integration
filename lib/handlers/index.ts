@@ -13,6 +13,7 @@ import { handleMemberRemovedFromPlan } from "./member-removed-from-plan";
 import { handleMemberSubscriptionCanceled } from "./member-subscription-canceled";
 import { handleMemberSubscriptionRenewed } from "./member-subscription-renewed";
 import { handleMemberUpdated } from "./member-updated";
+import { handleSpaceMemberAdded, handleSpaceMemberRemoved } from "./space-membership";
 
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
@@ -36,4 +37,8 @@ export const handlers: Record<string, WebhookHandler> = {
   CommentCreated: handleCommentCreated,
   RsvpCreated: handleRsvpCreated,
   ReactionCreated: handleReactionCreated,
+
+  // Tier 2: space membership (track-affinity signal)
+  SpaceMemberAdded: handleSpaceMemberAdded,
+  SpaceMemberRemoved: handleSpaceMemberRemoved,
 };
