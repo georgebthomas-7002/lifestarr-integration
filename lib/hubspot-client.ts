@@ -10,15 +10,28 @@ import { AssociationSpecAssociationCategoryEnum } from "@hubspot/api-client/lib/
 import type { LifestarrContactProps } from "@/lib/hubspot-properties";
 
 /**
- * Tag contacts that this integration creates with our own attribution so
- * HubSpot's auto-detection doesn't mislabel them (it has been picking up
- * "Zapier" by default). Applied on CREATE only — never overwrite the
- * legitimate latest-source of contacts that already exist in HubSpot.
+ * Properties applied only on contact CREATE — never on update — so we don't
+ * clobber legitimate marketing/source attribution for contacts that already
+ * exist in HubSpot.
+ *
+ * Covers:
+ *   - Latest analytics source (hs_latest_source / hs_latest_source_data_2)
+ *   - Record source detail (hs_object_source_detail_1) — both were defaulting
+ *     to "Zapier" without us setting them.
+ *   - hubspot_owner_id — assigns the contact to Joe so it shows up in his
+ *     HubSpot pipeline / inbox by default. Reads from env so the owner is
+ *     configurable without a code change.
  */
-const INTEGRATION_SOURCE_PROPS = {
-  hs_latest_source: "INTEGRATION",
-  hs_latest_source_data_2: "LifeStarr Integration",
-} as const;
+function buildCreateOnlyProps(): Record<string, string> {
+  const props: Record<string, string> = {
+    hs_latest_source: "INTEGRATION",
+    hs_latest_source_data_2: "LifeStarr Integration",
+    hs_object_source_detail_1: "LifeStarr Integration",
+  };
+  const ownerId = process.env.HUBSPOT_DEFAULT_CONTACT_OWNER_ID;
+  if (ownerId) props.hubspot_owner_id = ownerId;
+  return props;
+}
 
 let _client: Client | null = null;
 
@@ -147,7 +160,7 @@ export async function upsertContact(input: ContactInput): Promise<UpsertResult> 
 
   try {
     const payload: SimplePublicObjectInputForCreate = {
-      properties: { ...properties, ...INTEGRATION_SOURCE_PROPS },
+      properties: { ...properties, ...buildCreateOnlyProps() },
       associations: [],
     };
     const created = await getClient().crm.contacts.basicApi.create(payload);
