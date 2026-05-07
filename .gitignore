@@ -43,3 +43,8 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# editor / personal note vaults
+.obsidian/
+.idea/
+.vscode/
