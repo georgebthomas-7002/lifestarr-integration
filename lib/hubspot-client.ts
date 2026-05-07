@@ -9,6 +9,17 @@ import { AssociationSpecAssociationCategoryEnum } from "@hubspot/api-client/lib/
 
 import type { LifestarrContactProps } from "@/lib/hubspot-properties";
 
+/**
+ * Tag contacts that this integration creates with our own attribution so
+ * HubSpot's auto-detection doesn't mislabel them (it has been picking up
+ * "Zapier" by default). Applied on CREATE only — never overwrite the
+ * legitimate latest-source of contacts that already exist in HubSpot.
+ */
+const INTEGRATION_SOURCE_PROPS = {
+  hs_latest_source: "INTEGRATION",
+  hs_latest_source_data_2: "LifeStarr Integration",
+} as const;
+
 let _client: Client | null = null;
 
 function getClient(): Client {
@@ -136,7 +147,7 @@ export async function upsertContact(input: ContactInput): Promise<UpsertResult> 
 
   try {
     const payload: SimplePublicObjectInputForCreate = {
-      properties,
+      properties: { ...properties, ...INTEGRATION_SOURCE_PROPS },
       associations: [],
     };
     const created = await getClient().crm.contacts.basicApi.create(payload);
