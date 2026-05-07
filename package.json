@@ -16,7 +16,9 @@
     "test:webhook": "tsx scripts/test-webhook.ts",
     "test:webhook:bad-auth": "tsx scripts/test-webhook-bad-auth.ts",
     "setup:hubspot": "tsx scripts/setup-hubspot-properties.ts",
-    "seed:integrations": "tsx --env-file=.env.local scripts/seed-integrations.ts"
+    "seed:integrations": "tsx --env-file=.env.local scripts/seed-integrations.ts",
+    "backfill:dry": "node scripts/backfill-from-mighty-export.mjs --dry-run",
+    "backfill:run": "node scripts/backfill-from-mighty-export.mjs --execute"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
@@ -53,6 +55,7 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "xlsx": "^0.18.5"
   }
 }
