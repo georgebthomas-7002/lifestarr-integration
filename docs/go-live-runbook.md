@@ -4,6 +4,8 @@ Cutting LifeStarr Integration Hub over from local dev to a real Mighty Networks 
 
 Owner: George Thomas (Sidekick) + Joe (LifeStarr).
 
+> **Status update (2026-05-07 EOD):** Cutover is complete. The Mighty webhook is configured + delivering, Joe's `lifestarr.com` Resend domain is verified, `BYPASS_AUTH = false`, and 433 existing members were backfilled from a Mighty CSV export. The only remaining "Joe" item is the Premier upsell workflow on the HubSpot side. The pre-flight checklist below is preserved for future reference (e.g. spinning up a second environment).
+
 ## Pre-flight checklist
 
 Before pointing Mighty at production, verify each item below. Any "no" → fix before proceeding.
@@ -27,24 +29,23 @@ vercel env add <NAME> production preview development
 
 ### 3. HubSpot is set up
 
-- [ ] HubSpot Private App token is in Vercel env (`HUBSPOT_API_TOKEN`)
-- [ ] `npm run setup:hubspot` reports "9 contact properties verified"
-- [ ] `lifestarr` property group is visible on any HubSpot contact
-- [ ] Pipeline + stage IDs in env match a real pipeline (`HUBSPOT_CUSTOMER_PIPELINE_ID`, `HUBSPOT_NEW_PURCHASE_STAGE_ID`)
+- [x] HubSpot Private App token is in Vercel env (`HUBSPOT_API_TOKEN`)
+- [x] `npm run setup:hubspot` reports "22 contact properties verified" (was 9 in early audit)
+- [x] `lifestarr` property group is visible on any HubSpot contact
+- [x] Pipeline + stage IDs in env match a real pipeline (`HUBSPOT_CUSTOMER_PIPELINE_ID = 29106486`, `HUBSPOT_NEW_PURCHASE_STAGE_ID = 66332849`)
+- [x] `HUBSPOT_DEFAULT_CONTACT_OWNER_ID` set to Joe (`31326837`)
 
 ### 4. Auth is functional
 
-- [ ] `ALLOWED_EMAILS` in Vercel env contains every operator's email (George, Joe, anyone else who needs the dashboard)
-- [ ] `AUTH_RESEND_KEY` is set
-- [ ] `AUTH_URL` matches the production URL (`https://lifestarr-integration.vercel.app`)
-- [ ] `RESEND_FROM_EMAIL` is set
-  - Sandbox (current): `onboarding@resend.dev` — only the Resend account owner's email receives magic links
-  - Production: `noreply@lifestarr.com` (or similar) once Joe's domain is verified
-- [ ] You can sign in to the dashboard from the deployed URL
+- [x] `ALLOWED_EMAILS` in Vercel env contains every operator's email (`george@georgebthomas.com,joe@lifestarr.com,joe@workstarr.com,josh@supervillains.io`)
+- [x] `AUTH_RESEND_KEY` is set
+- [x] `AUTH_URL` matches the production URL (`https://lifestarr-integration.vercel.app`)
+- [x] `RESEND_FROM_EMAIL = mail@lifestarr.com` (verified domain)
+- [x] You can sign in to the dashboard from the deployed URL
 
-### 5. Sandbox-mode caveat
+### 5. ~~Sandbox-mode caveat~~ — RESOLVED
 
-While `RESEND_FROM_EMAIL=onboarding@resend.dev`, magic-link emails ONLY land in the inbox of the email address verified on the Resend account. To unblock the full team, switch to a verified-domain sender (see `docs/hubspot-setup.md` reference at the bottom).
+The `lifestarr.com` apex domain is verified on Resend as of 2026-05-07. All allowlisted emails can receive magic links from `mail@lifestarr.com`.
 
 ## Cutover steps
 

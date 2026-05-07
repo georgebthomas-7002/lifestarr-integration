@@ -76,21 +76,67 @@ npm run setup:hubspot
 The script idempotently:
 1. Verifies the token works (calls the property groups list API)
 2. Creates a property group named `lifestarr` if it doesn't already exist
-3. Creates 9 custom contact properties:
+3. Creates **21 custom contact properties** (as of 2026-05-07):
+
+### Identity & matching
 
 | Internal name | Type | Used for |
 |---|---|---|
 | `mighty_member_id` | string | Stable identity link to Mighty |
-| `lifestarr_plan` | enum | `intro` / `premier_monthly` / `premier_annual` / `none` |
-| `lifestarr_plan_status` | enum | `active` / `canceled` / `removed` / `past_due` |
-| `lifestarr_premier_start_date` | date | When Premier was first activated |
-| `lifestarr_premier_renewal_date` | date | Most recent Premier renewal |
-| `lifestarr_engagement_score` | number | Rolling 30-day score |
-| `lifestarr_premier_ready` | bool | Flips at score ≥ 50 (workflow trigger) |
-| `lifestarr_track` | enum | `foundation` / `growth` / `reset` / `unassigned` |
 | `mighty_match_status` | enum | `matched` / `new_contact_unverified` / `duplicate_review_needed` |
 
-After running, you'll see all 9 properties on any contact record under the **LifeStarr** property group.
+### Plan / lifecycle
+
+| Internal name | Type | Used for |
+|---|---|---|
+| `lifestarr_plan` | enum | `intro` / `premier_monthly` / `premier_annual` / `none` |
+| `lifestarr_plan_status` | enum | `active` / `canceled` / `removed` / `past_due` |
+| `lifestarr_central_account_created` | bool | True once member has joined the community |
+| `lifestarr_central_intro_account_created_date` | date | When their Mighty account was created |
+| `lifestarr_premier_start_date` | date | When Premier was first activated |
+| `lifestarr_premier_renewal_date` | date | Most recent Premier renewal |
+
+### Profile (synced from Mighty on MemberJoined / MemberUpdated)
+
+| Internal name | Type | Used for |
+|---|---|---|
+| `lifestarr_profile_bio` | string | Short bio from Mighty profile |
+| `lifestarr_location` | string | Free-form location string |
+| `lifestarr_timezone` | string | IANA tz name |
+| `lifestarr_profile_image_url` | string | URL of Mighty avatar |
+| `lifestarr_mighty_profile_url` | string | Permalink to their Mighty profile |
+| `lifestarr_referral_count` | number | Referrals tracked by Mighty |
+
+### Engagement
+
+| Internal name | Type | Used for |
+|---|---|---|
+| `lifestarr_engagement_score` | number | Rolling 30-day score |
+| `lifestarr_premier_ready` | bool | Flips at score ≥ 50 (workflow trigger) |
+
+### Spaces (Mighty community sub-spaces)
+
+| Internal name | Type | Used for |
+|---|---|---|
+| `lifestarr_spaces` | enum (multi-select) | Space IDs the member is in. UI shows friendly names. |
+| `lifestarr_space_membership_count` | number | Quick filter by activity breadth |
+| `lifestarr_last_space_joined_at` | date | Recency of join activity |
+| `lifestarr_last_space_left_at` | date | Recency of leave activity |
+| `lifestarr_track` | enum | `foundation` / `growth` / `reset` / `unassigned` (auto-set when joining an entry space) |
+
+> **Note:** `lifestarr_active_spaces` (text mirror) was deprecated on 2026-05-07 and archived in HubSpot. The multi-select `lifestarr_spaces` is the source of truth.
+
+### Standard HubSpot properties our integration also writes
+
+These existed before our integration; we just append/set them:
+
+| Property | Behavior |
+|---|---|
+| `firstname`, `lastname`, `email` | Sync from Mighty payload |
+| `lifecyclestage` | `salesqualifiedlead` for Intro members, `customer` for Premier |
+| `hubspot_owner_id` | Joe Rando — set only when contact has no current owner (write-once) |
+| `community_membership` (multi-select) | Append `LifeStarr Central` |
+| `contact_type` (multi-select) | Append `Community Member` |
 
 ## 4. Configure the deal pipeline
 

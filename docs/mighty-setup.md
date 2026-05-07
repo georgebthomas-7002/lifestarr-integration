@@ -2,6 +2,29 @@
 
 Configuring Mighty to send events to LifeStarr Integration Hub. Done once per environment (production deploy).
 
+> **Status update (2026-05-07):** This webhook is configured and live in production. Below are the actual gotchas we hit during cutover, preserved for anyone setting up a second environment.
+
+## Real-world gotchas discovered during setup (read these first)
+
+1. **Mighty's event names end in `Hook`** — the webhook payload has `event_type: "MemberJoinedHook"`, `"MemberPurchasedHook"`, `"MemberUpdatedHook"`, etc. — not the clean names Mighty's docs imply. Our `lib/router.ts` `normalizeEventType()` strips the suffix transparently, so handlers register under the clean name (`MemberJoined`).
+
+2. **Mighty fires `MemberJoined` per-space** — when a member joins a community OR is added to any Space within it, Mighty fires `MemberJoinedHook` with that `space_id` in the top-level payload. So a single new member can fire 20+ MemberJoined events in a burst. Same for `MemberLeftHook` when they leave a space. We treat each fire as idempotent and use it to populate `lifestarr_spaces`.
+
+3. **Bearer token field is auto-prefixed by Mighty.** Type the raw secret (no `Bearer ` prefix) into Mighty's "API Key" field. If you type `Bearer xxxxx`, Mighty wraps it as `Bearer Bearer xxxxx` and our verifier 401-rejects every event silently.
+
+4. **Mighty's "API Key" field accepts the URL with double slashes.** The default-prefilled URL in our screenshot was `https://lifestarr-integration.vercel.app//api/webhook` — fix to single slash before saving.
+
+5. **MemberJoined payload variants:**
+   - `MemberJoined` / `MemberUpdated` / `MemberLeft`: nested under `payload.member`
+   - `MemberPurchased`: flat with `member_*` prefix (no `member` wrapper)
+   - `MemberRemovedFromPlan`: third shape — flat at top level, no prefix
+   - `PostCreated` / `CommentCreated`: only have `creator_id`, no email at all
+   - Our `lib/handler-utils.ts extractMember()` handles all four shapes; if Mighty introduces a fifth, that's where to add it.
+
+6. **Mighty's Premier plan currently has `type: "free"` and `amount: 0`** because LifeStarr is hand-granting Premier as they collect payment in HubSpot. Our `mapMightyPlan()` prioritizes name keywords over `plan.type` for this reason — when Mighty/Stripe goes live and `type` becomes `paid`, the same code keeps working.
+
+7. **Bio updates fire `PostCreated`** — Mighty stores the member bio as an "About Me" post in the community, so editing the bio fires `MemberUpdated` AND `PostCreated`. We score the post (+10 engagement) which can be overzealous; tune in `lib/engagement.ts` if needed.
+
 ## Prerequisites
 
 - Mighty Networks community on a plan that supports webhooks (Mighty Pro / Business as of 2026)
