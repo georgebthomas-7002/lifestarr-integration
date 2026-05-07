@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
+import { sendFailureAlert } from "@/lib/alert";
 import { db, integrations, webhookEvents } from "@/lib/db";
 import {
   ENGAGEMENT_BUNDLE_EVENT_TYPE,
@@ -74,16 +75,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: "ok", id: row.id, outcome });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
+    const newRetryCount = (row.retryCount ?? 0) + 1;
     await db
       .update(webhookEvents)
       .set({
         status: "failed",
         errorMessage,
-        retryCount: (row.retryCount ?? 0) + 1,
+        retryCount: newRetryCount,
         processedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(webhookEvents.id, row.id));
+    after(async () => {
+      await sendFailureAlert({
+        webhookEventId: row.id,
+        eventType: body.event_type,
+        errorMessage,
+        retryCount: newRetryCount,
+      });
+    });
     if (ENGAGEMENT_EVENT_TYPES.includes(body.event_type as (typeof ENGAGEMENT_EVENT_TYPES)[number])) {
       await db
         .update(integrations)
