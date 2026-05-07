@@ -98,10 +98,18 @@ const SPACE_NAMES = {
   "21684136": "About LifeStarr INTRO",
 };
 
-// inverse map: lowercased name → id (for fuzzy matching, since the export
-// includes minor punctuation/emoji differences vs our config)
+// inverse map: aggressively-normalized name → id (strips emojis,
+// punctuation, and extra whitespace so "The Water Cooler 🎥" in the export
+// resolves to "The Water Cooler" in our config).
+function normalize(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 const NAME_TO_ID = Object.fromEntries(
-  Object.entries(SPACE_NAMES).map(([id, name]) => [name.toLowerCase().replace(/\s+/g, " ").trim(), id]),
+  Object.entries(SPACE_NAMES).map(([id, name]) => [normalize(name), id]),
 );
 
 const SPACE_TO_TRACK = {
@@ -112,8 +120,7 @@ const SPACE_TO_TRACK = {
 };
 
 function lookupSpaceId(name) {
-  const key = String(name).toLowerCase().replace(/\s+/g, " ").trim();
-  return NAME_TO_ID[key];
+  return NAME_TO_ID[normalize(name)];
 }
 
 // ---- read the export ----
