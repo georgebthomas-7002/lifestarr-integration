@@ -210,6 +210,32 @@ export async function upsertWithMatchStatus(
   return upsertContact({ ...input, mighty_match_status: matchStatus }, prefetchedExisting);
 }
 
+/**
+ * Build the profile-related contact properties from a Mighty member payload.
+ * Used by MemberJoined and MemberUpdated so both initial creation and later
+ * profile edits keep HubSpot in sync. Only includes fields that are actually
+ * present in the payload — avoids clobbering HubSpot values with undefined.
+ */
+export function profileFieldsFromMember(member: MemberPayload) {
+  const props: {
+    lifestarr_profile_bio?: string | null;
+    lifestarr_location?: string | null;
+    lifestarr_timezone?: string | null;
+    lifestarr_profile_image_url?: string | null;
+    lifestarr_mighty_profile_url?: string;
+    lifestarr_referral_count?: number;
+  } = {};
+  if (member.bio !== undefined) props.lifestarr_profile_bio = member.bio;
+  if (member.location !== undefined) props.lifestarr_location = member.location;
+  if (member.time_zone !== undefined) props.lifestarr_timezone = member.time_zone;
+  if (member.avatar !== undefined) props.lifestarr_profile_image_url = member.avatar;
+  if (member.permalink !== undefined) props.lifestarr_mighty_profile_url = member.permalink;
+  if (member.referral_count !== undefined) {
+    props.lifestarr_referral_count = member.referral_count;
+  }
+  return props;
+}
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }

@@ -1,6 +1,7 @@
 import {
   extractMember,
   flagNeedsReview,
+  profileFieldsFromMember,
   toIsoDate,
   upsertWithMatchStatus,
 } from "@/lib/handler-utils";
@@ -47,6 +48,7 @@ export async function handleMemberJoined(
       lifestarr_plan_status: "active",
       lifestarr_central_intro_account_created_date: joinedDate,
       lifestarr_central_account_created: true,
+      ...profileFieldsFromMember(member),
     },
     matchStatus,
     existing,

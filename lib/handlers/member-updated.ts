@@ -1,13 +1,18 @@
-import { extractMember, flagNeedsReview } from "@/lib/handler-utils";
+import {
+  extractMember,
+  flagNeedsReview,
+  profileFieldsFromMember,
+} from "@/lib/handler-utils";
 import { findContactByEmail, updateContactProperties } from "@/lib/hubspot-client";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
 /**
- * Mighty fires this when a member updates their profile (name, email, etc.).
- * We sync those basic identity fields back to HubSpot. We deliberately do
- * NOT touch lifecycle stage, plan, owner, or source attribution here —
- * those belong to the lifecycle/monetization handlers and should not be
- * re-stamped on every profile edit.
+ * Mighty fires this when a member updates their profile (name, bio, location,
+ * timezone, avatar, etc.). We refresh those fields in HubSpot.
+ *
+ * We deliberately do NOT touch lifecycle stage, plan, owner, or source
+ * attribution — those belong to the lifecycle/monetization handlers and
+ * should not be re-stamped on every profile edit.
  */
 export async function handleMemberUpdated(
   payload: MightyWebhookPayload,
@@ -31,10 +36,15 @@ export async function handleMemberUpdated(
     };
   }
 
-  const updates: Record<string, string> = {};
+  // Identity fields (HubSpot-side keys)
+  const updates: Record<string, string | number | null> = {};
   if (member.first_name !== undefined) updates.firstname = member.first_name;
   if (member.last_name !== undefined) updates.lastname = member.last_name;
   if (member.id !== undefined) updates.mighty_member_id = String(member.id);
+
+  // Profile fields — same shape MemberJoined uses, so HubSpot stays consistent.
+  // updateContactProperties handles undefined/null cleanly.
+  Object.assign(updates, profileFieldsFromMember(member));
 
   if (Object.keys(updates).length > 0) {
     await updateContactProperties(existing.id, updates);
@@ -43,6 +53,6 @@ export async function handleMemberUpdated(
   return {
     success: true,
     hubspotContactId: existing.id,
-    message: Object.keys(updates).length > 0 ? "identity_synced" : "noop",
+    message: Object.keys(updates).length > 0 ? "profile_synced" : "noop",
   };
 }

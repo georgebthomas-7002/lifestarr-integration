@@ -140,14 +140,14 @@ Bucketed by purpose. Each row is a property we'd create in the `lifestarr` group
 
 ### Identity / profile (capture more from MemberJoined / MemberUpdated)
 
-| New property | Type | Source | Why useful |
-|---|---|---|---|
-| `lifestarr_profile_bio` | string (textarea) | `payload.bio` | Sales/CS context — see who they are without leaving HubSpot. |
-| `lifestarr_location` | string | `payload.location` | Geo-targeting / regional cohort analysis. |
-| `lifestarr_timezone` | string | `payload.timezone` | Schedule-friendly outreach timing. |
-| `lifestarr_profile_image_url` | string | `payload.profile_image_url` | Personal touch in HubSpot views. |
-| `lifestarr_referral_source` | string | `payload.referral_source` or query param at join | Attribution beyond what HubSpot's analytics catches. |
-| `lifestarr_invited_by_member_id` | string | `MemberInvitedHook.inviter_id` | Build a referral graph. |
+| New property                     | Type              | Source                                           | Why useful                                                   |
+| -------------------------------- | ----------------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| `lifestarr_profile_bio`          | string (textarea) | `payload.bio`                                    | Sales/CS context — see who they are without leaving HubSpot. |
+| `lifestarr_location`             | string            | `payload.location`                               | Geo-targeting / regional cohort analysis.                    |
+| `lifestarr_timezone`             | string            | `payload.timezone`                               | Schedule-friendly outreach timing.                           |
+| `lifestarr_profile_image_url`    | string            | `payload.profile_image_url`                      | Personal touch in HubSpot views.                             |
+| `lifestarr_referral_source`      | string            | `payload.referral_source` or query param at join | Attribution beyond what HubSpot's analytics catches.         |
+| `lifestarr_invited_by_member_id` | string            | `MemberInvitedHook.inviter_id`                   | Build a referral graph.                                      |
 
 ### Monetization — fuller picture
 

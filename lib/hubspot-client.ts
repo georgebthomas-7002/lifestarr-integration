@@ -168,6 +168,24 @@ function toHubspotProperties(input: Partial<ContactInput>): Record<string, strin
     props.lifestarr_premier_ready = String(input.lifestarr_premier_ready);
   }
   if (input.lifestarr_track !== undefined) props.lifestarr_track = input.lifestarr_track;
+  if (input.lifestarr_profile_bio !== undefined) {
+    props.lifestarr_profile_bio = input.lifestarr_profile_bio ?? "";
+  }
+  if (input.lifestarr_location !== undefined) {
+    props.lifestarr_location = input.lifestarr_location ?? "";
+  }
+  if (input.lifestarr_timezone !== undefined) {
+    props.lifestarr_timezone = input.lifestarr_timezone ?? "";
+  }
+  if (input.lifestarr_profile_image_url !== undefined) {
+    props.lifestarr_profile_image_url = input.lifestarr_profile_image_url ?? "";
+  }
+  if (input.lifestarr_mighty_profile_url !== undefined) {
+    props.lifestarr_mighty_profile_url = input.lifestarr_mighty_profile_url;
+  }
+  if (input.lifestarr_referral_count !== undefined) {
+    props.lifestarr_referral_count = String(input.lifestarr_referral_count);
+  }
   if (input.lifestarr_active_spaces !== undefined) {
     props.lifestarr_active_spaces = input.lifestarr_active_spaces;
   }

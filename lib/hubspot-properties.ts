@@ -138,6 +138,54 @@ export const CONTACT_PROPERTIES: ContactPropertyDef[] = [
     ],
   },
   {
+    name: "lifestarr_profile_bio",
+    label: "LifeStarr Profile Bio",
+    description: "Bio the member set on their Mighty profile.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_location",
+    label: "LifeStarr Location",
+    description: "Free-form location string from the Mighty profile (e.g. \"Indian Trail, NC\").",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_timezone",
+    label: "LifeStarr Timezone",
+    description: "IANA timezone the member set on their Mighty profile (e.g. \"America/New_York\").",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_profile_image_url",
+    label: "LifeStarr Profile Image URL",
+    description: "URL of the member's Mighty profile avatar.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_mighty_profile_url",
+    label: "LifeStarr Mighty Profile URL",
+    description: "Direct link to the member's profile in the Mighty community.",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "string",
+    fieldType: "text",
+  },
+  {
+    name: "lifestarr_referral_count",
+    label: "LifeStarr Referral Count",
+    description: "How many other members this person has referred to the LifeStarr community (from Mighty).",
+    groupName: LIFESTARR_PROPERTY_GROUP,
+    type: "number",
+    fieldType: "number",
+  },
+  {
     name: "lifestarr_track",
     label: "LifeStarr Track",
     description: "Member's assigned program track.",
@@ -218,6 +266,13 @@ export type LifestarrContactProps = {
   lifestarr_last_space_joined_at?: string; // YYYY-MM-DD
   lifestarr_last_space_left_at?: string; // YYYY-MM-DD
   lifestarr_space_membership_count?: number;
+  // Profile fields (set/refreshed by MemberJoined + MemberUpdated)
+  lifestarr_profile_bio?: string | null;
+  lifestarr_location?: string | null;
+  lifestarr_timezone?: string | null;
+  lifestarr_profile_image_url?: string | null;
+  lifestarr_mighty_profile_url?: string;
+  lifestarr_referral_count?: number;
   mighty_match_status?: MightyMatchStatus;
   lifecyclestage?: HubSpotLifecycleStage;
 };
