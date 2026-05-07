@@ -28,6 +28,7 @@ export async function handleMemberPurchased(
   const existing = await findContactByEmail(member.email);
   const matchStatus = existing ? "matched" : "new_contact_unverified";
 
+  // Pass `existing` to skip the duplicate findContactByEmail inside upsertContact.
   const { contact, created } = await upsertWithMatchStatus(
     {
       email: member.email,
@@ -39,6 +40,7 @@ export async function handleMemberPurchased(
       lifestarr_premier_start_date: plan !== "intro" && plan !== "none" ? startDate : undefined,
     },
     matchStatus,
+    existing,
   );
 
   if (created) {

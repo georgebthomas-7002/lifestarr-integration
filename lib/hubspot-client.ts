@@ -43,7 +43,10 @@ function getClient(): Client {
   if (!token) {
     throw new Error("HUBSPOT_API_TOKEN is not set");
   }
-  _client = new Client({ accessToken: token });
+  // numberOfApiCallRetries lets the SDK absorb 429 rate-limit spikes
+  // (e.g. Mighty backfill bursts) by retrying with HubSpot's Retry-After header.
+  // Six retries with exponential backoff is enough to ride out a typical burst.
+  _client = new Client({ accessToken: token, numberOfApiCallRetries: 6 });
   return _client;
 }
 
@@ -145,8 +148,19 @@ export type UpsertResult = {
   created: boolean;
 };
 
-export async function upsertContact(input: ContactInput): Promise<UpsertResult> {
-  const existing = await findContactByEmail(input.email);
+/**
+ * @param input - the contact properties to set
+ * @param prefetchedExisting - if the caller already looked up the contact via
+ *   findContactByEmail, pass the result here to avoid a second search round-trip.
+ *   Pass `null` if you've already verified the contact doesn't exist.
+ *   Omit (or `undefined`) to have upsertContact do the search itself.
+ */
+export async function upsertContact(
+  input: ContactInput,
+  prefetchedExisting?: SimplePublicObject | null,
+): Promise<UpsertResult> {
+  const existing =
+    prefetchedExisting === undefined ? await findContactByEmail(input.email) : prefetchedExisting;
   const properties = toHubspotProperties(input);
 
   if (existing) {

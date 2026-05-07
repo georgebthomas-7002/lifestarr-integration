@@ -17,6 +17,7 @@ export async function handleMemberJoined(
   const matchStatus = existing ? "matched" : "new_contact_unverified";
   const joinedDate = toIsoDate(member.joined_at);
 
+  // Pass `existing` to skip the duplicate findContactByEmail inside upsertContact.
   const { contact, created } = await upsertWithMatchStatus(
     {
       email: member.email,
@@ -29,6 +30,7 @@ export async function handleMemberJoined(
       lifestarr_central_account_created: true,
     },
     matchStatus,
+    existing,
   );
 
   // Set lifecyclestage separately. HubSpot can reject a "backward" transition

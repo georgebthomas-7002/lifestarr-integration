@@ -144,8 +144,9 @@ export async function flagNeedsReview(opts: {
 export async function upsertWithMatchStatus(
   input: Omit<ContactInput, "mighty_match_status">,
   matchStatus: "matched" | "new_contact_unverified" | "duplicate_review_needed",
+  prefetchedExisting?: import("@hubspot/api-client/lib/codegen/crm/contacts").SimplePublicObject | null,
 ): Promise<UpsertResult> {
-  return upsertContact({ ...input, mighty_match_status: matchStatus });
+  return upsertContact({ ...input, mighty_match_status: matchStatus }, prefetchedExisting);
 }
 
 export function todayISO(): string {
