@@ -11,22 +11,28 @@ import type { LifestarrContactProps } from "@/lib/hubspot-properties";
 
 /**
  * Properties applied only on contact CREATE — never on update — so we don't
- * clobber legitimate marketing/source attribution for contacts that already
+ * clobber legitimate ownership / marketing flags on contacts that already
  * exist in HubSpot.
  *
- * Covers:
- *   - Latest analytics source (hs_latest_source / hs_latest_source_data_2)
- *   - Record source detail (hs_object_source_detail_1) — both were defaulting
- *     to "Zapier" without us setting them.
- *   - hubspot_owner_id — assigns the contact to Joe so it shows up in his
- *     HubSpot pipeline / inbox by default. Reads from env so the owner is
- *     configurable without a code change.
+ * NOTE on traffic-source attribution: we do NOT try to set
+ *   - hs_latest_source_data_2
+ *   - hs_object_source_detail_1
+ *   - hs_latest_source
+ * HubSpot rejects all three:
+ *   - the two `*_detail_*` / `*_data_*` properties are READ_ONLY in the CRM
+ *     API — HubSpot derives them automatically from the calling app's
+ *     Private App identity. With Zapier disabled, new contacts auto-attribute
+ *     to "LifeStarr Integration Hub" (our Private App name) — no override
+ *     needed.
+ *   - hs_latest_source's allowed enum doesn't include "INTEGRATION" or any
+ *     LifeStarr-flavored value, so we leave HubSpot to auto-set it.
+ *
+ * If the auto-detected source label ever needs to change, rename the Private
+ * App in HubSpot Settings → Integrations → Private Apps. That label is what
+ * shows up in HubSpot's source drill-downs.
  */
 function buildCreateOnlyProps(): Record<string, string> {
   const props: Record<string, string> = {
-    hs_latest_source: "INTEGRATION",
-    hs_latest_source_data_2: "LifeStarr Integration",
-    hs_object_source_detail_1: "LifeStarr Integration",
     // Mark new contacts as Marketing Contacts in HubSpot's Marketing Hub.
     hs_marketable_status: "MARKETING_CONTACT",
   };
