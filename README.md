@@ -177,6 +177,8 @@ Configurable in `lib/engagement.ts`:
 
 Threshold: 50 points in a rolling 30-day window flips `lifestarr_premier_ready` to `true` on the contact's HubSpot record. Joe's HubSpot workflow keys off that property to launch the Premier upsell sequence.
 
+Full reference (window mechanic, HubSpot writeback, dashboard surfaces, tuning levers): [docs/engagement-scoring.md](docs/engagement-scoring.md).
+
 ## Troubleshooting
 
 **Webhook returns 401**: bearer token mismatch. Verify `MIGHTY_WEBHOOK_SECRET` matches what Mighty is sending and that the value lives in Vercel's production env vars.
@@ -197,6 +199,7 @@ node -e "require('dotenv').config({path:'.env.local'}); const {Client} = require
 
 - [docs/mighty-setup.md](docs/mighty-setup.md) — Configuring the Mighty Networks webhook
 - [docs/hubspot-setup.md](docs/hubspot-setup.md) — Creating the HubSpot Private App, custom properties, and pipeline
+- [docs/engagement-scoring.md](docs/engagement-scoring.md) — How the rolling-30 score and Premier-ready threshold work
 
 ## Build phases
 

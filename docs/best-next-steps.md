@@ -12,15 +12,15 @@ What more we could pull from Mighty webhooks (or future Mighty REST API access) 
 
 ### Member identity / profile
 
-| What | Why useful | Effort |
-|---|---|---|
-| `referrer_email` / `referrer_id` (in MemberJoined payload) | Build a referral graph: who invited who. Power "thank your referrer" flows. | ~30 min — new property `lifestarr_invited_by_email` + handler tweak |
-| Mighty custom profile question answers | LifeStarr's onboarding questionnaire data (per-member). The export's "Profile Question Answers" sheet has these. | ~1 hr — needs per-account question schema decision |
-| `last_visited_network` timestamp | Drives inactivity-detection ("hasn't logged in in 30 days") | ~15 min — sync to a new `lifestarr_last_active_at` property |
-| Sign-in method (Facebook / LinkedIn / Apple / Password) | Marketing segmentation by acquisition channel | ~15 min — single string property |
-| `welcome_checklist_completed` (bool) | Onboarding-funnel reporting | ~15 min |
-| Ambassador level + `members_referred` count | Identify community evangelists for VIP nurture | ✅ already syncing `lifestarr_referral_count`; could add `lifestarr_ambassador_level` |
-| `notification_method` / `email_frequency` | Honor member preferences when designing email sequences | ~15 min |
+| What                                                       | Why useful                                                                                                       | Effort                                                                               |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `referrer_email` / `referrer_id` (in MemberJoined payload) | Build a referral graph: who invited who. Power "thank your referrer" flows.                                      | ~30 min — new property `lifestarr_invited_by_email` + handler tweak                  |
+| Mighty custom profile question answers                     | LifeStarr's onboarding questionnaire data (per-member). The export's "Profile Question Answers" sheet has these. | ~1 hr — needs per-account question schema decision                                   |
+| `last_visited_network` timestamp                           | Drives inactivity-detection ("hasn't logged in in 30 days")                                                      | ~15 min — sync to a new `lifestarr_last_active_at` property                          |
+| Sign-in method (Facebook / LinkedIn / Apple / Password)    | Marketing segmentation by acquisition channel                                                                    | ~15 min — single string property                                                     |
+| `welcome_checklist_completed` (bool)                       | Onboarding-funnel reporting                                                                                      | ~15 min                                                                              |
+| Ambassador level + `members_referred` count                | Identify community evangelists for VIP nurture                                                                   | ✅ already syncing `lifestarr_referral_count`; could add `lifestarr_ambassador_level` |
+| `notification_method` / `email_frequency`                  | Honor member preferences when designing email sequences                                                          | ~15 min                                                                              |
 
 ### Monetization (when Mighty + Stripe goes live)
 
