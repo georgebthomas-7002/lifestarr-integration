@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 
 import { signIn } from "@/auth";
@@ -23,10 +24,51 @@ export default async function LoginPage({
     try {
       await signIn("resend", { email, redirectTo: "/dashboard" });
     } catch (err) {
-      // Auth.js throws a magic redirect — let it propagate.
-      // Other errors (e.g. allowlist rejection) get re-thrown.
-      throw err;
+      // The success path throws a NEXT_REDIRECT — re-throw so Next can navigate.
+      if (isRedirectError(err)) throw err;
+      // Otherwise (e.g. Resend API 403), surface a visible error.
+      console.error("[login] signIn failed:", err);
+      redirect("/login?error=SendFailed");
     }
+  }
+
+  if (error === "SendFailed") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 p-6">
+        <Card className="w-full max-w-xl">
+          <CardHeader>
+            <CardTitle>Couldn&apos;t send the magic link</CardTitle>
+            <CardDescription className="space-y-2">
+              <span className="block">
+                The email send failed. Most likely cause: the Resend sender domain
+                (<code className="font-mono text-xs">RESEND_FROM_EMAIL</code>) isn&apos;t verified
+                yet, or your email isn&apos;t on the Resend account&apos;s allowlist (sandbox mode).
+              </span>
+              <span className="block">
+                Check Vercel runtime logs for the exact Resend response, or have the Resend
+                account owner verify the domain at{" "}
+                <a
+                  className="underline"
+                  href="https://resend.com/domains"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  resend.com/domains
+                </a>
+                .
+              </span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a href="/login">
+              <Button variant="outline" className="w-full">
+                Try again
+              </Button>
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Auth.js routes "AccessDenied" here when the signIn callback returns false.
