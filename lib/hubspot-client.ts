@@ -96,6 +96,8 @@ export async function findContactByMightyMemberId(
         "lifestarr_active_spaces",
         "lifestarr_spaces",
         "lifestarr_space_membership_count",
+        "community_membership",
+        "contact_type",
       ],
       limit: 1,
       sorts: [],
@@ -130,6 +132,8 @@ export async function findContactByEmail(email: string): Promise<SimplePublicObj
         "lifestarr_active_spaces",
         "lifestarr_spaces",
         "lifestarr_space_membership_count",
+        "community_membership",
+        "contact_type",
       ],
       limit: 1,
       sorts: [],
@@ -239,6 +243,7 @@ export async function upsertContact(
       const updated = await getClient().crm.contacts.basicApi.update(existing.id, {
         properties,
       });
+      await ensureCommunityMembershipTags(existing.id, existing);
       return { contact: updated, created: false };
     } catch (err) {
       throw new HubSpotClientError(`upsertContact.update(${existing.id})`, err);
@@ -251,12 +256,9 @@ export async function upsertContact(
       associations: [],
     };
     const created = await getClient().crm.contacts.basicApi.create(payload);
+    await ensureCommunityMembershipTags(created.id, existing);
     return { contact: created, created: true };
   } catch (err) {
-    // Race condition: a parallel handler invocation for the same email won the
-    // create-race a few ms before us. HubSpot 400s with "Contact already exists".
-    // Re-search and fall through to the update path so this event lands cleanly
-    // instead of bouncing as failed.
     if (isAlreadyExistsError(err)) {
       const racy = await findContactByEmail(input.email);
       if (racy) {
@@ -264,6 +266,7 @@ export async function upsertContact(
           const updated = await getClient().crm.contacts.basicApi.update(racy.id, {
             properties,
           });
+          await ensureCommunityMembershipTags(racy.id, racy);
           return { contact: updated, created: false };
         } catch (updateErr) {
           throw new HubSpotClientError(`upsertContact.update-after-race(${racy.id})`, updateErr);
@@ -272,6 +275,56 @@ export async function upsertContact(
     }
     throw new HubSpotClientError(`upsertContact.create(${input.email})`, err);
   }
+}
+
+/**
+ * Ensure every contact our integration touches is tagged with:
+ *   community_membership += "LifeStarr Central"
+ *   contact_type         += "Community Member"
+ *
+ * Both are HubSpot multi-select (semicolon-separated). We APPEND rather
+ * than overwrite so existing tags (e.g. Founding Member, Facebook Community)
+ * are preserved. Skips the API call entirely when both values are already
+ * present.
+ */
+async function ensureCommunityMembershipTags(
+  contactId: string,
+  existing: SimplePublicObject | null,
+): Promise<void> {
+  const COMMUNITY = "LifeStarr Central";
+  const TYPE = "Community Member";
+
+  const existingCommunity = parseMultiSelect(existing?.properties?.community_membership);
+  const existingType = parseMultiSelect(existing?.properties?.contact_type);
+
+  const needsCommunity = !existingCommunity.includes(COMMUNITY);
+  const needsType = !existingType.includes(TYPE);
+  if (!needsCommunity && !needsType) return;
+
+  const updates: Record<string, string> = {};
+  if (needsCommunity) {
+    updates.community_membership = [...existingCommunity, COMMUNITY].join(";");
+  }
+  if (needsType) {
+    updates.contact_type = [...existingType, TYPE].join(";");
+  }
+
+  try {
+    await getClient().crm.contacts.basicApi.update(contactId, { properties: updates });
+  } catch (err) {
+    console.warn(
+      `[ensureCommunityMembershipTags] update skipped for ${contactId}:`,
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
+function parseMultiSelect(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function isAlreadyExistsError(err: unknown): boolean {
