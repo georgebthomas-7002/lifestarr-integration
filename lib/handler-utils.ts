@@ -33,6 +33,20 @@ export type MemberPayload = {
   email: string;
   first_name?: string;
   last_name?: string;
+  // Mighty profile fields available on MemberJoined / MemberUpdated
+  bio?: string | null;
+  avatar?: string | null;
+  location?: string | null;
+  time_zone?: string | null;
+  permalink?: string;
+  referral_count?: number;
+  ambassador_level?: string;
+  // Timestamps — Mighty uses `created_at` for join date; legacy `joined_at`
+  // is the alias we expose to handlers via extractMember.
+  created_at?: string;
+  updated_at?: string;
+  joined_at?: string;
+  // Plan / monetization fields (MemberPurchased et al.)
   plan_id?: string | number;
   plan_name?: string;
   amount?: number;
@@ -42,11 +56,47 @@ export type MemberPayload = {
   renewed_at?: string;
   canceled_at?: string;
   removed_at?: string;
-  joined_at?: string;
 };
 
+/**
+ * Mighty wraps the actual member object inside `payload.member` for the
+ * lifecycle/identity events (MemberJoined, MemberUpdated). For the rare event
+ * shape that's flat, we fall back to the top-level payload object.
+ *
+ * Mighty also uses `created_at` for the join date — we mirror it onto
+ * `joined_at` so existing handlers keep working without each one knowing.
+ */
 export function extractMember(payload: MightyWebhookPayload): MemberPayload {
-  return payload.payload as MemberPayload;
+  const p = payload.payload as Record<string, unknown>;
+  const inner = (p.member as Record<string, unknown> | undefined) ?? p;
+  const member = { ...inner } as MemberPayload;
+
+  if (!member.joined_at && member.created_at) {
+    member.joined_at = member.created_at;
+  }
+
+  // Plan-bearing events sometimes nest plan info under `payload.plan` rather than
+  // on the member. Surface those fields so mapMightyPlan / handlers can read them.
+  const planObj = (p.plan as Record<string, unknown> | undefined) ?? undefined;
+  if (planObj) {
+    if (member.plan_id === undefined && planObj.id !== undefined) {
+      member.plan_id = planObj.id as string | number;
+    }
+    if (!member.plan_name && typeof planObj.name === "string") {
+      member.plan_name = planObj.name;
+    }
+    if (member.amount === undefined && typeof planObj.amount === "number") {
+      member.amount = planObj.amount;
+    }
+    if (!member.currency && typeof planObj.currency === "string") {
+      member.currency = planObj.currency;
+    }
+    if (!member.interval && typeof planObj.interval === "string") {
+      member.interval = planObj.interval;
+    }
+  }
+
+  return member;
 }
 
 /**

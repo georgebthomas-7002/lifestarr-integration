@@ -1,4 +1,4 @@
-import { createDeal } from "@/lib/hubspot-client";
+import { createDeal, findContactByEmail, updateContactProperties } from "@/lib/hubspot-client";
 import {
   extractMember,
   flagNeedsReview,
@@ -7,7 +7,6 @@ import {
   upsertWithMatchStatus,
 } from "@/lib/handler-utils";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
-import { findContactByEmail } from "@/lib/hubspot-client";
 
 export async function handleMemberPurchased(
   payload: MightyWebhookPayload,
@@ -49,6 +48,22 @@ export async function handleMemberPurchased(
       mightyMemberId: String(member.id ?? ""),
       reason: "no_hubspot_match",
     });
+  }
+
+  // Premier purchase = HubSpot lifecycle stage moves to Customer.
+  // For "intro" or "none" plans (free or unrecognized), leave it alone —
+  // MemberJoined already set salesqualifiedlead.
+  // Wrapped in try/catch so HubSpot's "no backward transition" rule never
+  // breaks the rest of the handler.
+  if (plan === "premier_monthly" || plan === "premier_annual") {
+    try {
+      await updateContactProperties(contact.id, { lifecyclestage: "customer" });
+    } catch (err) {
+      console.warn(
+        `[member-purchased] lifecyclestage update skipped for ${contact.id}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
 
   const deal = await createDeal({
