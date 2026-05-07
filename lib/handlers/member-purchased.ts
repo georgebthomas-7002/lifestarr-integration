@@ -52,12 +52,15 @@ export async function handleMemberPurchased(
     });
   }
 
-  // Premier purchase = HubSpot lifecycle stage moves to Customer.
-  // For "intro" or "none" plans (free or unrecognized), leave it alone —
-  // MemberJoined already set salesqualifiedlead.
+  // Mighty fires MemberPurchased on EVERY plan signup, including the free/intro
+  // tier. For free plans we don't want a $0 "Closed won" deal cluttering the
+  // pipeline — those joins are already covered by MemberJoined. Skip the deal.
+  const isPaidPlan = plan === "premier_monthly" || plan === "premier_annual";
+
+  // Lifecycle stage: paid Premier purchase → Customer. Free joins keep SQL.
   // Wrapped in try/catch so HubSpot's "no backward transition" rule never
   // breaks the rest of the handler.
-  if (plan === "premier_monthly" || plan === "premier_annual") {
+  if (isPaidPlan) {
     try {
       await updateContactProperties(contact.id, { lifecyclestage: "customer" });
     } catch (err) {
@@ -68,21 +71,31 @@ export async function handleMemberPurchased(
     }
   }
 
-  const deal = await createDeal({
-    contactId: contact.id,
-    dealName: `${member.first_name ?? "New"} ${member.last_name ?? "Member"} — ${member.plan_name ?? "LifeStarr"}`,
-    amount: member.amount ?? 0,
-    pipeline,
-    stage,
-    closeDate: startDate,
-  });
+  let dealId: string | undefined;
+  if (isPaidPlan) {
+    const deal = await createDeal({
+      contactId: contact.id,
+      dealName: `${member.first_name ?? "New"} ${member.last_name ?? "Member"} — ${member.plan_name ?? "LifeStarr"}`,
+      amount: member.amount ?? 0,
+      pipeline,
+      stage,
+      closeDate: startDate,
+    });
+    dealId = deal.id;
+  }
 
   return {
     success: true,
     hubspotContactId: contact.id,
-    hubspotDealId: deal.id,
+    hubspotDealId: dealId,
     needsReview: created,
     reviewReason: created ? "no_hubspot_match" : undefined,
-    message: created ? "contact_created_and_flagged" : "contact_matched",
+    message: isPaidPlan
+      ? created
+        ? "premier_contact_created_and_flagged"
+        : "premier_contact_matched"
+      : created
+        ? "free_contact_created_and_flagged"
+        : "free_contact_matched_no_deal",
   };
 }

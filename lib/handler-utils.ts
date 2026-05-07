@@ -10,21 +10,32 @@ import type { MightyWebhookPayload } from "@/lib/types";
 import { eq } from "drizzle-orm";
 
 /**
- * Map a Mighty plan_name + interval into our LifeStarr plan enum.
- * Adjust these heuristics once we have the actual plan names from production Mighty.
+ * Map Mighty plan info to our LifeStarr plan enum.
+ * Prefers plan.type ("free" | "paid") since it's the most reliable signal.
+ * Falls back to name keywords for safety.
+ *
+ * Mighty's actual interval values are "month" / "year" (not "monthly" / "yearly").
  */
 export function mapMightyPlan(plan: {
   plan_name?: string;
+  plan_type?: string;
   interval?: string;
 }): LifestarrPlan {
   const name = (plan.plan_name ?? "").toLowerCase();
+  const type = (plan.plan_type ?? "").toLowerCase();
   const interval = (plan.interval ?? "").toLowerCase();
 
-  if (name.includes("intro")) return "intro";
-  if (name.includes("annual") || interval === "annual" || interval === "yearly") {
-    return "premier_annual";
+  if (type === "free" || name.includes("intro")) return "intro";
+  if (type === "paid") {
+    if (interval === "year" || interval === "yearly" || interval === "annual" || name.includes("annual")) {
+      return "premier_annual";
+    }
+    // Default paid → monthly (covers "month", "monthly", and unknown cadences)
+    return "premier_monthly";
   }
-  if (name.includes("premier") || interval === "monthly") return "premier_monthly";
+  // Legacy fallback for events where type is missing
+  if (name.includes("annual") || interval === "year" || interval === "yearly") return "premier_annual";
+  if (name.includes("premier") || interval === "month" || interval === "monthly") return "premier_monthly";
   return "none";
 }
 
@@ -49,9 +60,10 @@ export type MemberPayload = {
   // Plan / monetization fields (MemberPurchased et al.)
   plan_id?: string | number;
   plan_name?: string;
+  plan_type?: string; // Mighty: "free" | "paid"
   amount?: number;
   currency?: string;
-  interval?: string;
+  interval?: string; // Mighty uses "month" / "year" (not "monthly" / "yearly")
   purchased_at?: string;
   renewed_at?: string;
   canceled_at?: string;
@@ -59,31 +71,62 @@ export type MemberPayload = {
 };
 
 /**
- * Mighty wraps the actual member object inside `payload.member` for the
- * lifecycle/identity events (MemberJoined, MemberUpdated). For the rare event
- * shape that's flat, we fall back to the top-level payload object.
+ * Mighty webhook payload shapes are inconsistent across event types:
  *
- * Mighty also uses `created_at` for the join date — we mirror it onto
- * `joined_at` so existing handlers keep working without each one knowing.
+ *   Variant A (MemberJoined, MemberUpdated):
+ *     { member: { id, email, first_name, ... }, network_id, space_id }
+ *
+ *   Variant B (MemberPurchased et al.):
+ *     { plan, purchase, member_id, member_email, member_first_name, ... }
+ *
+ *   Variant C (older / unknown):
+ *     { id, email, first_name, ... } — flat
+ *
+ * Plus `created_at` is Mighty's join date but our type uses `joined_at`.
+ * This function normalizes all three shapes into a single MemberPayload.
  */
 export function extractMember(payload: MightyWebhookPayload): MemberPayload {
   const p = payload.payload as Record<string, unknown>;
-  const inner = (p.member as Record<string, unknown> | undefined) ?? p;
-  const member = { ...inner } as MemberPayload;
+
+  let member: MemberPayload;
+
+  if (p.member && typeof p.member === "object") {
+    // Variant A — nested
+    member = { ...(p.member as Record<string, unknown>) } as MemberPayload;
+  } else if (typeof p.member_email === "string") {
+    // Variant B — flat with member_* prefix
+    member = {
+      id: p.member_id as string | number | undefined,
+      email: p.member_email,
+      first_name: (p.member_first_name as string | undefined) ?? undefined,
+      last_name: (p.member_last_name as string | undefined) ?? undefined,
+      avatar: (p.member_avatar as string | null | undefined) ?? undefined,
+      location: (p.member_location as string | null | undefined) ?? undefined,
+      time_zone: (p.member_time_zone as string | null | undefined) ?? undefined,
+      permalink: (p.member_permalink as string | undefined) ?? undefined,
+      referral_count: p.member_referral_count as number | undefined,
+      ambassador_level: (p.member_ambassador_level as string | undefined) ?? undefined,
+    };
+  } else {
+    // Variant C — flat
+    member = { ...p } as MemberPayload;
+  }
 
   if (!member.joined_at && member.created_at) {
     member.joined_at = member.created_at;
   }
 
-  // Plan-bearing events sometimes nest plan info under `payload.plan` rather than
-  // on the member. Surface those fields so mapMightyPlan / handlers can read them.
-  const planObj = (p.plan as Record<string, unknown> | undefined) ?? undefined;
+  // payload.plan: id, name, type (free/paid), amount, currency, interval (month/year)
+  const planObj = p.plan as Record<string, unknown> | undefined;
   if (planObj) {
     if (member.plan_id === undefined && planObj.id !== undefined) {
       member.plan_id = planObj.id as string | number;
     }
     if (!member.plan_name && typeof planObj.name === "string") {
       member.plan_name = planObj.name;
+    }
+    if (!member.plan_type && typeof planObj.type === "string") {
+      member.plan_type = planObj.type;
     }
     if (member.amount === undefined && typeof planObj.amount === "number") {
       member.amount = planObj.amount;
@@ -94,6 +137,12 @@ export function extractMember(payload: MightyWebhookPayload): MemberPayload {
     if (!member.interval && typeof planObj.interval === "string") {
       member.interval = planObj.interval;
     }
+  }
+
+  // payload.purchase: id, purchased_at, ...
+  const purchaseObj = p.purchase as Record<string, unknown> | undefined;
+  if (purchaseObj && !member.purchased_at && typeof purchaseObj.purchased_at === "string") {
+    member.purchased_at = purchaseObj.purchased_at;
   }
 
   return member;

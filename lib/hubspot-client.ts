@@ -182,8 +182,40 @@ export async function upsertContact(
     const created = await getClient().crm.contacts.basicApi.create(payload);
     return { contact: created, created: true };
   } catch (err) {
+    // Race condition: a parallel handler invocation for the same email won the
+    // create-race a few ms before us. HubSpot 400s with "Contact already exists".
+    // Re-search and fall through to the update path so this event lands cleanly
+    // instead of bouncing as failed.
+    if (isAlreadyExistsError(err)) {
+      const racy = await findContactByEmail(input.email);
+      if (racy) {
+        try {
+          const updated = await getClient().crm.contacts.basicApi.update(racy.id, {
+            properties,
+          });
+          return { contact: updated, created: false };
+        } catch (updateErr) {
+          throw new HubSpotClientError(`upsertContact.update-after-race(${racy.id})`, updateErr);
+        }
+      }
+    }
     throw new HubSpotClientError(`upsertContact.create(${input.email})`, err);
   }
+}
+
+function isAlreadyExistsError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const code = (err as { code?: number }).code;
+  if (code !== 409 && code !== 400) return false;
+  const body = (err as { body?: { message?: string; category?: string } }).body;
+  const msg = (body?.message ?? "").toLowerCase();
+  const cat = (body?.category ?? "").toLowerCase();
+  return (
+    msg.includes("already exists") ||
+    msg.includes("contact already exists") ||
+    cat === "conflict" ||
+    cat === "object_already_exists"
+  );
 }
 
 export async function updateContactProperties(
