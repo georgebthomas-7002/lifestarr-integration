@@ -6,7 +6,7 @@ import {
   upsertWithMatchStatus,
 } from "@/lib/handler-utils";
 import { findContactByEmail, updateContactProperties } from "@/lib/hubspot-client";
-import { spaceLabel, spaceTrack } from "@/lib/space-config";
+import { SPACE_NAMES, spaceLabel, spaceTrack } from "@/lib/space-config";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
 /**
@@ -31,7 +31,18 @@ export async function handleMemberJoined(
 
   const p = payload.payload as Record<string, unknown>;
   const spaceIdRaw = p.space_id;
+  const networkIdRaw = p.network_id;
   const spaceId = spaceIdRaw !== undefined && spaceIdRaw !== null ? String(spaceIdRaw) : undefined;
+  const networkId =
+    networkIdRaw !== undefined && networkIdRaw !== null ? String(networkIdRaw) : undefined;
+  // Mighty fires MemberJoined once for the initial community signup with
+  // space_id == network_id (the network/community itself, not a real space).
+  // Treat that fire as community-only and skip lifestarr_spaces tracking.
+  // Also defensive against unknown space ids — writing one to the
+  // multi-select would 400 from HubSpot (INVALID_OPTION).
+  const isCommunityJoin = spaceId !== undefined && spaceId === networkId;
+  const isKnownSpace = spaceId !== undefined && spaceId in SPACE_NAMES;
+  const trackedSpaceId = !isCommunityJoin && isKnownSpace ? spaceId : undefined;
 
   const existing = await findContactByEmail(member.email);
   const matchStatus = existing ? "matched" : "new_contact_unverified";
@@ -64,12 +75,19 @@ export async function handleMemberJoined(
 
   // Space tracking via the multi-select (HubSpot renders the friendly names).
   let spaceMessage: string | undefined;
-  if (spaceId) {
+  if (isCommunityJoin) {
+    spaceMessage = "community_join_no_space";
+  } else if (spaceId && !isKnownSpace) {
+    console.warn(
+      `[member-joined] unknown space_id ${spaceId} for contact ${contact.id} — add it to lib/space-config.ts SPACE_NAMES`,
+    );
+    spaceMessage = `unknown_space[${spaceId}]_skipped`;
+  } else if (trackedSpaceId) {
     const priorProps = (existing ?? contact).properties as Record<string, string> | undefined;
     const priorIds = parseMultiSelect(priorProps?.lifestarr_spaces);
 
-    if (!priorIds.includes(spaceId)) {
-      const updatedIds = [...priorIds, spaceId];
+    if (!priorIds.includes(trackedSpaceId)) {
+      const updatedIds = [...priorIds, trackedSpaceId];
 
       await updateContactProperties(contact.id, {
         lifestarr_spaces: joinMultiSelect(updatedIds),
@@ -77,7 +95,7 @@ export async function handleMemberJoined(
         lifestarr_space_membership_count: updatedIds.length,
       });
 
-      const track = spaceTrack(spaceId);
+      const track = spaceTrack(trackedSpaceId);
       if (track) {
         try {
           await updateContactProperties(contact.id, { lifestarr_track: track });
@@ -89,11 +107,11 @@ export async function handleMemberJoined(
         }
       }
 
-      spaceMessage = `+space[${spaceLabel(spaceId)}]_total=${updatedIds.length}${
+      spaceMessage = `+space[${spaceLabel(trackedSpaceId)}]_total=${updatedIds.length}${
         track ? `_track=${track}` : ""
       }`;
     } else {
-      spaceMessage = `space[${spaceLabel(spaceId)}]_already_recorded`;
+      spaceMessage = `space[${spaceLabel(trackedSpaceId)}]_already_recorded`;
     }
   }
 

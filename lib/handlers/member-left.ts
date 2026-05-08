@@ -9,7 +9,7 @@ import {
   findContactByMightyMemberId,
   updateContactProperties,
 } from "@/lib/hubspot-client";
-import { spaceLabel } from "@/lib/space-config";
+import { SPACE_NAMES, spaceLabel } from "@/lib/space-config";
 import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
 
 /**
@@ -26,10 +26,25 @@ export async function handleMemberLeft(
   const member = extractMember(payload);
   const p = payload.payload as Record<string, unknown>;
   const spaceIdRaw = p.space_id;
+  const networkIdRaw = p.network_id;
   const spaceId = spaceIdRaw !== undefined && spaceIdRaw !== null ? String(spaceIdRaw) : undefined;
+  const networkId =
+    networkIdRaw !== undefined && networkIdRaw !== null ? String(networkIdRaw) : undefined;
 
   if (!spaceId) {
     return { success: false, message: "missing_space_id" };
+  }
+  // Mirror the MemberJoined guard — a fire where space_id == network_id is
+  // a community-level event, not a space leave. Unknown space ids would
+  // also be a no-op (filter drops nothing) but indicate config drift.
+  if (spaceId === networkId) {
+    return { success: true, message: "community_leave_no_space" };
+  }
+  if (!(spaceId in SPACE_NAMES)) {
+    console.warn(
+      `[member-left] unknown space_id ${spaceId} — add it to lib/space-config.ts SPACE_NAMES`,
+    );
+    return { success: true, message: `unknown_space[${spaceId}]_skipped` };
   }
 
   let contact = member.email ? await findContactByEmail(member.email) : null;
