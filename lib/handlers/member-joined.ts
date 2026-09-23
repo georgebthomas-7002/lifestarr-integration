@@ -23,9 +23,7 @@ import type { HandlerResult, MightyWebhookPayload } from "@/lib/types";
  * shows the names as chips on the contact record AND lets lists filter by
  * "is any of [Foundation Path, Decision Coach]".
  */
-export async function handleMemberJoined(
-  payload: MightyWebhookPayload,
-): Promise<HandlerResult> {
+export async function handleMemberJoined(payload: MightyWebhookPayload): Promise<HandlerResult> {
   const member = extractMember(payload);
   if (!member.email) return { success: false, message: "missing_email" };
 
@@ -48,14 +46,22 @@ export async function handleMemberJoined(
   const matchStatus = existing ? "matched" : "new_contact_unverified";
   const joinedDate = toIsoDate(member.joined_at);
 
+  // MemberJoined fires once per space, so it must not stomp a plan set by the
+  // monetization handlers (e.g. a Premier member joining a new space). Only
+  // default to intro when the contact has no LifeStarr plan yet.
+  const priorPlan = (existing?.properties as Record<string, string | null> | undefined)
+    ?.lifestarr_plan;
+  const hasNoPlan = !priorPlan || priorPlan === "none";
+
   const { contact, created } = await upsertWithMatchStatus(
     {
       email: member.email,
       firstName: member.first_name,
       lastName: member.last_name,
       mighty_member_id: member.id !== undefined ? String(member.id) : undefined,
-      lifestarr_plan: "intro",
-      lifestarr_plan_status: "active",
+      ...(hasNoPlan
+        ? { lifestarr_plan: "intro" as const, lifestarr_plan_status: "active" as const }
+        : {}),
       lifestarr_central_intro_account_created_date: joinedDate,
       lifestarr_central_account_created: true,
       ...profileFieldsFromMember(member),
@@ -64,13 +70,15 @@ export async function handleMemberJoined(
     existing,
   );
 
-  try {
-    await updateContactProperties(contact.id, { lifecyclestage: "salesqualifiedlead" });
-  } catch (err) {
-    console.warn(
-      `[member-joined] lifecyclestage update skipped for ${contact.id}:`,
-      err instanceof Error ? err.message : String(err),
-    );
+  if (hasNoPlan) {
+    try {
+      await updateContactProperties(contact.id, { lifecyclestage: "salesqualifiedlead" });
+    } catch (err) {
+      console.warn(
+        `[member-joined] lifecyclestage update skipped for ${contact.id}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
 
   // Space tracking via the multi-select (HubSpot renders the friendly names).
