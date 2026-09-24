@@ -5,6 +5,11 @@ Session-level notes on what changed and why. Code-level detail is in
 
 ---
 
+## 2026-09-24 — Full database export for an outside developer
+
+- **Made a pg_dump of the Neon DB for developer handoff.** The files are at `C:\Users\georg\Documents\lifestarr-export\`, outside the repo: a custom-format `.dump`, a plain `.sql` and a README. It contains full data, including member PII, but the `session` and `verification_token` rows were left out. Checked it: row counts match the source (3,306 webhook_events, 99 engagement_scores, 39 needs_review_queue, 9 integrations, 2 users).
+- **Correction:** memory had said to dump from `DATABASE_URL_UNPOOLED`, but that variable is an empty string in `.env.local`. Only the pooled `DATABASE_URL` has a value. The direct host is that hostname with `-pooler` removed.
+
 ## 2026-09-23 — MemberJoined no longer resets plans; Premier reconciliation
 
 - **Fixed MemberJoined relabeling Premier members as Intro** (`d1787c7`). MemberJoined fires once per space, and every fire set `lifestarr_plan=intro`, `lifestarr_plan_status=active`, and lifecycle SQL. So any Premier member who joined a new space was downgraded to Intro in HubSpot, and could fall back into the Premier upsell workflow, which filters on `plan = intro`. Those three writes now happen only when the contact has no plan yet (blank or `none`). Found during a line-by-line code review for the "What It Does" overview doc.
