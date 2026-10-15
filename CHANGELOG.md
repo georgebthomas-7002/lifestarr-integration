@@ -5,6 +5,19 @@ Session-level notes on what changed and why. Code-level detail is in
 
 ---
 
+## 2026-10-15 — Mike D's app took over the Mighty sync; HubSpot field cleanup
+
+- **This integration is now legacy.** George confirmed that Mike D's app (app.lifestarr.com) owns the Mighty → HubSpot sync. Still to do: disable the Mighty webhook pointing at `/api/webhook`. Until then, both apps write `lifestarr_track`, `lifestarr_spaces` and `mighty_match_status`. Once Joe deletes `lifestarr_central_account_created`, our MemberJoined would 400, because HubSpot rejects an update that names a missing property.
+- **Reviewed Joe Rando's "Data Issues Between HubSpot and Mighty" sheet** (513 contacts that have a Mighty Member ID):
+  - `Joined LiferStarr Central | Mighty Networks` was never written by this repo. It's blank for every member with ID above ~39.6M, so whatever set it was switched off.
+  - Account Created was 502/513. The 11 blanks are 6 of George's test accounts and 5 new real members.
+  - Agreed with Joe to delete both duplicate fields. "Mighty Member ID is known" replaces them.
+- **Correction:** I first blamed the 5 real blanks on our MemberUpdated/MemberPurchased handlers, which set `mighty_member_id` without `lifestarr_central_account_created`. Mike's reply made his sync the likelier cause: it writes Member ID and never Account Created, and the blanks are the newest members.
+
+## 2026-10-05 — Fresh database export for Mike D
+
+- **Redid the pg_dump the same way as 2026-09-24** (full data, `--no-owner --no-acl`, `session`/`verification_token` rows left out). The files are at `C:\Users\georg\Documents\lifestarr-export-2026-10-05\`: a `.dump`, a `.sql` and a README. Both files' row counts match the live DB: 3,527 webhook_events, 101 engagement_scores, 41 needs_review_queue, 9 integrations, 2 users.
+
 ## 2026-09-24 — Full database export for an outside developer
 
 - **Made a pg_dump of the Neon DB for developer handoff.** The files are at `C:\Users\georg\Documents\lifestarr-export\`, outside the repo: a custom-format `.dump`, a plain `.sql` and a README. It contains full data, including member PII, but the `session` and `verification_token` rows were left out. Checked it: row counts match the source (3,306 webhook_events, 99 engagement_scores, 39 needs_review_queue, 9 integrations, 2 users).
